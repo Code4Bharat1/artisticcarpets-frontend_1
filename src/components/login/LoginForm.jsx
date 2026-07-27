@@ -31,7 +31,7 @@ export default function LoginForm() {
     setServerError("");
     try {
       const response = await loginUser(formData);
-      login(response.user || { name: formData.email.split("@")[0], email: formData.email });
+      login(response.user || { name: formData.email.split("@")[0], email: formData.email }, response.token);
       router.push("/");
     } catch (err) {
       setServerError(err?.message || "Invalid credentials. Please try again.");

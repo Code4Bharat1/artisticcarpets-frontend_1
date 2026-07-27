@@ -348,10 +348,11 @@ function DetailCart({ cart, removeFromCart, updateCartQuantity, placeOrder }) {
                         })),
                         paymentMethod: "razorpay"
                       };
-                      await axiosInstance.post("/orders", orderPayload);
+                      const orderRes = await axiosInstance.post("/orders", orderPayload);
+                      const realOrder = orderRes.data?.order || {};
 
                       alert(`Payment successful! Payment ID: ${response.razorpay_payment_id}`);
-                      placeOrder({ total, item: cart.length === 1 ? cart[0].name : `${cart.length} Items` });
+                      placeOrder({ ...realOrder, item: cart.length === 1 ? cart[0].name : `${cart.length} Items`, total: realOrder.total || total });
                       router.push("/dashboard?tab=activeOrders");
                     } else {
                       alert("Payment verification failed on the server.");
@@ -394,28 +395,51 @@ function DetailCart({ cart, removeFromCart, updateCartQuantity, placeOrder }) {
 }
 
 function ActiveOrdersTab() {
-  const { orders } = useStore();
+  const [apiOrders, setApiOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(null);
 
-  // Filter active orders (not Delivered, not Returned)
-  const activeOrders = orders.filter(o => o.status !== "Delivered" && o.status !== "Returned");
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const res = await axiosInstance.get("/orders/my");
+        if (res.data && res.data.data) {
+          setApiOrders(res.data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+        setErrorMsg(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+  }, []);
 
-  // Fallback to dummy data if no orders exist yet
-  const displayOrders = activeOrders.length > 0 ? activeOrders : [
-    { id: "ORD-987654321", date: "Oct 24, 2026", status: "Shipped", item: "Persian Vintage Oushak Rug", estimatedDelivery: "Oct 28, 2026" },
-    { id: "ORD-123456789", date: "Oct 25, 2026", status: "Ordered", item: "Modern Abstract Area Rug", estimatedDelivery: "Nov 02, 2026" },
-    { id: "ORD-555555555", date: "Oct 22, 2026", status: "Out for Delivery", item: "Bohemian Jute Runner", estimatedDelivery: "Today" },
-  ];
+  const activeOrders = apiOrders.filter(o =>
+    o.status !== "delivered" && o.status !== "returned" && o.status !== "refunded" && o.status !== "cancelled" &&
+    o.status !== "Delivered" && o.status !== "Returned"
+  );
 
   const getProgress = (status) => {
-    if (status === "Ordered") return "0%";
-    if (status === "Shipped") return "50%";
-    if (status === "Out for Delivery" || status === "Delivered") return "100%";
+    if (!status) return "0%";
+    const s = status.toLowerCase().replace(/_/g, " ");
+    if (["ordered", "pending", "confirmed", "processing"].includes(s)) return "0%";
+    if (s === "shipped") return "50%";
+    if (["out for delivery", "delivered"].includes(s)) return "100%";
     return "0%";
   };
 
   const getStepState = (status, stepIndex) => {
-    const steps = ["Ordered", "Shipped", "Out for Delivery"];
-    const currentIdx = steps.indexOf(status) !== -1 ? steps.indexOf(status) : 0;
+    if (!status) return stepIndex === 0;
+    const s = status.toLowerCase().replace(/_/g, " ");
+    const steps = ["ordered", "shipped", "out for delivery"];
+    
+    let mapped = s;
+    if (["pending", "confirmed", "processing"].includes(s)) mapped = "ordered";
+    else if (s === "delivered") mapped = "out for delivery";
+    
+    const currentIdx = steps.indexOf(mapped) !== -1 ? steps.indexOf(mapped) : 0;
     return stepIndex <= currentIdx;
   };
 
@@ -426,74 +450,130 @@ function ActiveOrdersTab() {
         <p className="font-sans text-sm text-[#666666] mt-2">Track the progress of your current shipments.</p>
       </div>
 
-      <div className="space-y-8">
-        {displayOrders.map((order) => {
-          const step1Active = getStepState(order.status, 0);
-          const step2Active = getStepState(order.status, 1);
-          const step3Active = getStepState(order.status, 2);
+      {loading ? (
+        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border border-[#E8E3DD] mt-8 shadow-sm">
+          <p className="text-gray-500 font-sans animate-pulse">Loading orders...</p>
+        </div>
+      ) : errorMsg ? (
+        <div className="flex flex-col items-center justify-center p-12 bg-red-50 rounded-3xl border border-red-100 mt-8">
+          <p className="text-red-700 font-sans font-medium mb-2">{errorMsg}</p>
+          {(errorMsg.toLowerCase().includes("token") || errorMsg.toLowerCase().includes("access denied") || errorMsg.toLowerCase().includes("invalid credentials")) ? (
+            <p className="text-red-600 font-sans text-sm text-center max-w-md">
+              Please click the <strong className="font-semibold text-red-800">Logout</strong> button on the bottom left, and log back in to refresh your secure session.
+            </p>
+          ) : null}
+        </div>
+      ) : activeOrders.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border border-[#E8E3DD] mt-8 shadow-sm">
+          <p className="text-[#666666] font-sans">You have no active orders.</p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {activeOrders.map((order) => {
+            const step1Active = getStepState(order.status, 0);
+            const step2Active = getStepState(order.status, 1);
+            const step3Active = getStepState(order.status, 2);
+            
+            // Format item string from items array if real backend order, or fallback
+            const itemString = order.items && order.items.length > 0
+              ? (order.items.length === 1 ? order.items[0].name : `${order.items.length} Items`)
+              : (order.item || "Product");
 
-          return (
-            <div key={order.id} className="bg-white border border-[#E8E3DD] rounded-3xl p-8 lg:p-10 shadow-lg shadow-black/5 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-[#faf9f5] rounded-full -translate-y-1/2 translate-x-1/3"></div>
+            const formattedDate = new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-12 relative z-10 border-b border-[#E8E3DD] pb-8">
-                <div>
-                  <p className="text-[11px] text-[#999999] uppercase tracking-widest font-bold mb-1">Order Number</p>
-                  <p className="font-bold text-xl font-mono text-[#1E1E1E]">{order.id}</p>
+            return (
+              <div key={order.orderNumber} className="bg-white border border-[#E8E3DD] rounded-3xl p-8 lg:p-10 shadow-lg shadow-black/5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-[#faf9f5] rounded-full -translate-y-1/2 translate-x-1/3"></div>
+
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-12 relative z-10 border-b border-[#E8E3DD] pb-8">
+                  <div>
+                    <p className="text-[11px] text-[#999999] uppercase tracking-widest font-bold mb-1">Order Number</p>
+                    <p className="font-bold text-xl font-mono text-[#1E1E1E]">{order.orderNumber}</p>
+                  </div>
+                  <div className="text-left sm:text-right mt-4 sm:mt-0">
+                    <p className="text-[11px] text-[#999999] uppercase tracking-widest font-bold mb-1">Total</p>
+                    <p className="font-bold text-xl font-serif text-[#700B08]">₹{order.total?.toLocaleString()}</p>
+                  </div>
                 </div>
-                <div className="text-left sm:text-right mt-4 sm:mt-0">
-                  <p className="text-[11px] text-[#999999] uppercase tracking-widest font-bold mb-1">Estimated Delivery</p>
-                  <p className="font-bold text-xl font-serif text-[#700B08]">{order.estimatedDelivery}</p>
+
+                <div className="relative z-10 px-4 md:px-10">
+                  <div className="absolute inset-0 flex items-center px-4 md:px-10" aria-hidden="true">
+                    <div className="h-1 w-full bg-[#E8E3DD] rounded-full overflow-hidden">
+                      <div className="h-full bg-[#700B08] transition-all duration-500" style={{ width: getProgress(order.status) }}></div>
+                    </div>
+                  </div>
+                  <div className="relative flex justify-between">
+                    <div className="flex flex-col items-center">
+                      <span className={`h-12 w-12 rounded-full flex items-center justify-center ring-8 ring-white shadow-md transition-colors ${step1Active ? 'bg-[#700B08] text-white' : 'bg-white border-2 border-[#E8E3DD] text-[#999999]'}`}>
+                        <Package className="h-5 w-5" />
+                      </span>
+                      <p className={`mt-4 text-xs font-bold uppercase tracking-wider text-center w-24 ${step1Active ? 'text-[#700B08]' : 'text-[#999999]'}`}>Ordered</p>
+                      <p className="text-[10px] text-[#999999] mt-1 text-center w-24">{formattedDate}</p>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className={`h-12 w-12 rounded-full flex items-center justify-center ring-8 ring-white shadow-md transition-colors ${step2Active ? 'bg-[#700B08] text-white' : 'bg-white border-2 border-[#E8E3DD] text-[#999999]'}`}>
+                        <Truck className="h-5 w-5" />
+                      </span>
+                      <p className={`mt-4 text-xs font-bold uppercase tracking-wider text-center w-24 ${step2Active ? 'text-[#700B08]' : 'text-[#999999]'}`}>Shipped</p>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className={`h-12 w-12 rounded-full flex items-center justify-center ring-8 ring-white shadow-md transition-colors ${step3Active ? 'bg-[#700B08] text-white' : 'bg-white border-2 border-[#E8E3DD] text-[#999999]'}`}>
+                        <MapPin className="h-5 w-5" />
+                      </span>
+                      <p className={`mt-4 text-xs font-bold uppercase tracking-wider text-center w-24 ${step3Active ? 'text-[#700B08]' : 'text-[#999999]'}`}>Out for Delivery</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-12 pt-8 border-t border-[#E8E3DD] relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                  <div className="flex-1">
+                    <p className="font-sans text-sm font-semibold text-[#1E1E1E] mb-2">{itemString}</p>
+                    {order.items && order.items.length > 0 && (
+                       <div className="space-y-1">
+                         {order.items.map(it => (
+                            <p key={it._id} className="text-xs text-[#666666]">
+                              {it.quantity}x {it.name} - ₹{it.totalPrice?.toLocaleString()}
+                            </p>
+                         ))}
+                       </div>
+                    )}
+                  </div>
                 </div>
               </div>
-
-              <div className="relative z-10 px-4 md:px-10">
-                <div className="absolute inset-0 flex items-center px-4 md:px-10" aria-hidden="true">
-                  <div className="h-1 w-full bg-[#E8E3DD] rounded-full overflow-hidden">
-                    <div className="h-full bg-[#700B08] transition-all duration-500" style={{ width: getProgress(order.status) }}></div>
-                  </div>
-                </div>
-                <div className="relative flex justify-between">
-                  <div className="flex flex-col items-center">
-                    <span className={`h-12 w-12 rounded-full flex items-center justify-center ring-8 ring-white shadow-md transition-colors ${step1Active ? 'bg-[#700B08] text-white' : 'bg-white border-2 border-[#E8E3DD] text-[#999999]'}`}>
-                      <Package className="h-5 w-5" />
-                    </span>
-                    <p className={`mt-4 text-xs font-bold uppercase tracking-wider text-center w-24 ${step1Active ? 'text-[#700B08]' : 'text-[#999999]'}`}>Ordered</p>
-                    <p className="text-[10px] text-[#999999] mt-1 text-center w-24">{order.date}</p>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <span className={`h-12 w-12 rounded-full flex items-center justify-center ring-8 ring-white shadow-md transition-colors ${step2Active ? 'bg-[#700B08] text-white' : 'bg-white border-2 border-[#E8E3DD] text-[#999999]'}`}>
-                      <Truck className="h-5 w-5" />
-                    </span>
-                    <p className={`mt-4 text-xs font-bold uppercase tracking-wider text-center w-24 ${step2Active ? 'text-[#700B08]' : 'text-[#999999]'}`}>Shipped</p>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <span className={`h-12 w-12 rounded-full flex items-center justify-center ring-8 ring-white shadow-md transition-colors ${step3Active ? 'bg-[#700B08] text-white' : 'bg-white border-2 border-[#E8E3DD] text-[#999999]'}`}>
-                      <MapPin className="h-5 w-5" />
-                    </span>
-                    <p className={`mt-4 text-xs font-bold uppercase tracking-wider text-center w-24 ${step3Active ? 'text-[#700B08]' : 'text-[#999999]'}`}>Out for Delivery</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-12 pt-8 border-t border-[#E8E3DD] relative z-10 flex justify-between items-center">
-                <p className="font-sans text-sm font-semibold text-[#1E1E1E]">Item: {order.item}</p>
-                <button className="px-6 py-2 border border-[#E8E3DD] rounded-xl text-[#1E1E1E] font-sans text-xs font-semibold hover:bg-[#faf9f5]">View Details</button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
 function OrderHistoryTab() {
-  const [history, setHistory] = useState([
-    { id: "ORD-9382", date: "Sep 15, 2026", status: "Delivered", total: 1250, item: "Persian Vintage Oushak Rug", refundStatus: "None" },
-    { id: "ORD-8472", date: "Aug 28, 2026", status: "Delivered", total: 890, item: "Modern Geometric Runner", refundStatus: "Refunded" },
-    { id: "ORD-7111", date: "Jul 10, 2026", status: "Returned", total: 450, item: "Classic Silk Carpet", refundStatus: "None" }
-  ]);
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const res = await axiosInstance.get("/orders/my");
+        if (res.data && res.data.data) {
+          const terminalOrders = res.data.data.filter(
+            o => ["delivered", "returned", "refunded", "cancelled"].includes(o.status.toLowerCase())
+          );
+          setHistory(terminalOrders);
+        }
+      } catch (error) {
+        console.error("Failed to fetch order history:", error);
+        setErrorMsg(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHistory();
+  }, []);
+
+  const displayHistory = history;
 
   const [refundModalOpen, setRefundModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -517,49 +597,62 @@ function OrderHistoryTab() {
       </div>
 
       <div className="space-y-6">
-        {history.map((order) => (
-          <div key={order.id} className="bg-white border border-[#E8E3DD] rounded-2xl p-6 hover:shadow-lg transition-shadow duration-300">
-            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-[#E8E3DD]/50 pb-5 mb-5">
-              <div>
-                <p className="font-sans text-xs font-bold text-[#999999] uppercase tracking-widest mb-1">Order #{order.id}</p>
-                <p className="font-sans text-sm font-medium text-[#1E1E1E]">Placed on {order.date}</p>
-              </div>
-              <div className="text-left md:text-right flex flex-col md:items-end">
-                <p className="font-sans text-lg font-bold text-[#1E1E1E]">${order.total.toLocaleString()}</p>
-                <span className={`inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full font-sans text-[10px] font-bold uppercase tracking-widest ${order.status === "Delivered" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
-                  {order.status === "Delivered" ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                  {order.status}
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-[#faf9f5] rounded-xl flex items-center justify-center border border-[#E8E3DD]">
-                  <Package className="w-6 h-6 text-[#999999]" />
+        {displayHistory.map((order) => {
+          const itemString = order.items && order.items.length > 0
+              ? (order.items.length === 1 ? order.items[0].name : `${order.items.length} Items`)
+              : (order.item || "Product");
+          const formattedDate = new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          const displayStatus = (order.status || "").replace(/_/g, " ");
+
+          return (
+            <div key={order.orderNumber || order.id} className="bg-white border border-[#E8E3DD] rounded-2xl p-6 hover:shadow-lg transition-shadow duration-300">
+              <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-[#E8E3DD]/50 pb-5 mb-5">
+                <div>
+                  <p className="font-sans text-xs font-bold text-[#999999] uppercase tracking-widest mb-1">Order #{order.orderNumber || order.id}</p>
+                  <p className="font-sans text-sm font-medium text-[#1E1E1E]">Placed on {formattedDate || order.date}</p>
                 </div>
-                <p className="font-sans text-sm text-[#1E1E1E] font-semibold">{order.item}</p>
-              </div>
-              <div className="flex gap-3">
-                <button className="px-5 py-2.5 rounded-xl border border-[#E8E3DD] font-sans text-xs font-semibold text-[#1E1E1E] hover:bg-[#faf9f5] transition-colors">
-                  Invoice
-                </button>
-                <button className="bg-[#1E1E1E] text-white px-5 py-2.5 rounded-xl font-sans text-xs font-semibold hover:bg-[#700B08] transition-colors shadow-sm">
-                  Reorder
-                </button>
-                {order.refundStatus === "None" && order.status === "Delivered" && (
-                  <button onClick={() => openRefundModal(order)} className="bg-red-50 text-[#700B08] px-5 py-2.5 rounded-xl border border-red-200 font-sans text-xs font-semibold hover:bg-red-100 transition-colors shadow-sm">
-                    Request Refund
-                  </button>
-                )}
-                {order.refundStatus !== "None" && (
-                  <span className={`inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full font-sans text-[10px] font-bold uppercase tracking-widest ${order.refundStatus === "Pending" ? "bg-yellow-50 text-yellow-700 border border-yellow-200" : order.refundStatus === "Approved" ? "bg-blue-50 text-blue-700 border border-blue-200" : order.refundStatus === "Refunded" ? "bg-green-50 text-green-700 border border-green-200" : "bg-gray-50 text-gray-700 border border-gray-200"}`}>
-                    Refund: {order.refundStatus}
+                <div className="text-left md:text-right flex flex-col md:items-end">
+                  <p className="font-sans text-lg font-bold text-[#1E1E1E]">₹{(order.total || 0).toLocaleString()}</p>
+                  <span className={`inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full font-sans text-[10px] font-bold uppercase tracking-widest ${order.status?.toLowerCase() === "delivered" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                    {order.status?.toLowerCase() === "delivered" ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                    {displayStatus}
                   </span>
-                )}
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 bg-[#faf9f5] rounded-xl flex items-center justify-center border border-[#E8E3DD]">
+                    <Package className="w-6 h-6 text-[#999999]" />
+                  </div>
+                  <div>
+                    <p className="font-sans text-sm text-[#1E1E1E] font-semibold">{itemString}</p>
+                    {order.items && order.items.length > 0 && (
+                      <p className="text-xs text-[#666666] mt-1">{order.items.length} items included</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button className="px-5 py-2.5 rounded-xl border border-[#E8E3DD] font-sans text-xs font-semibold text-[#1E1E1E] hover:bg-[#faf9f5] transition-colors">
+                    Invoice
+                  </button>
+                  <button className="bg-[#1E1E1E] text-white px-5 py-2.5 rounded-xl font-sans text-xs font-semibold hover:bg-[#700B08] transition-colors shadow-sm">
+                    Reorder
+                  </button>
+                  {(order.refundStatus === "None" || !order.refundStatus) && order.status?.toLowerCase() === "delivered" && (
+                    <button onClick={() => openRefundModal(order)} className="bg-red-50 text-[#700B08] px-5 py-2.5 rounded-xl border border-red-200 font-sans text-xs font-semibold hover:bg-red-100 transition-colors shadow-sm">
+                      Request Refund
+                    </button>
+                  )}
+                  {order.refundStatus && order.refundStatus !== "None" && (
+                    <span className={`inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full font-sans text-[10px] font-bold uppercase tracking-widest ${order.refundStatus === "Pending" ? "bg-yellow-50 text-yellow-700 border border-yellow-200" : order.refundStatus === "Approved" ? "bg-blue-50 text-blue-700 border border-blue-200" : order.refundStatus === "Refunded" ? "bg-green-50 text-green-700 border border-green-200" : "bg-gray-50 text-gray-700 border border-gray-200"}`}>
+                      Refund: {order.refundStatus}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {refundModalOpen && selectedOrder && (

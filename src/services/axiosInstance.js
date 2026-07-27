@@ -9,6 +9,26 @@ const axiosInstance = axios.create({
   timeout: 10000,
 });
 
+// Request interceptor — attach JWT token from Zustand store
+axiosInstance.interceptors.request.use(
+  (config) => {
+    try {
+      const raw = localStorage.getItem("artistic-carpets-storage");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const token = parsed?.state?.token;
+        if (token) {
+          config.headers["Authorization"] = `Bearer ${token}`;
+        }
+      }
+    } catch (_) {
+      // localStorage not available (SSR), ignore
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Response interceptor for unified handling
 axiosInstance.interceptors.response.use(
   (response) => response,
