@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+
+@theme {
+  --color-primary-brand: #6C1D1B;
+  --color-hero-bg: #FEF8E6;
+  --color-collection-bg: #F6EEE8;
+  --color-brand-white: #FCF9F8;
+  --color-text-primary: #222222;
+  --color-text-secondary: #666666;
+  --color-border-custom: #E8E3DD;
+  --font-serif: 'DM Serif Display', sans-serif;
+  --font-sans: 'Hanken Grotesk', sans-serif;
+  --font-archivo: 'Archivo', sans-serif;
+  --font-clash: 'Clash Display', sans-serif;
+}
+
+
+
+:root {
+  --background: #FCF9F8;
+  --foreground: #222222;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-serif);
+}
+
+/* Custom Scrollbar for premium feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FCF9F8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #E8E3DD;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #980E0A;
+}
+
+/* Scrollbar Hide Utility for the collections slider */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
