@@ -9,13 +9,22 @@ export const useStore = create(
       isCartOpen: false,
       addToCart: (product) =>
         set((state) => {
+          if ((product.stock !== undefined && product.stock <= 0) || (product.availableStock !== undefined && product.availableStock <= 0)) {
+            alert("This product is currently out of stock and cannot be added to your cart.");
+            return state;
+          }
           const pId = product.id || product._id;
           const existing = state.cart.find((item) => (item.id || item._id) === pId);
           if (existing) {
+            if ((product.stock !== undefined && existing.quantity >= product.stock) || (product.availableStock !== undefined && existing.quantity >= product.availableStock)) {
+              alert("You cannot add more of this product than what is in stock.");
+              return state;
+            }
             return {
               cart: state.cart.map((item) =>
                 (item.id || item._id) === pId ? { ...item, quantity: item.quantity + 1 } : item
               ),
+              isCartOpen: true
             };
           }
           return { cart: [...state.cart, { ...product, id: pId, quantity: 1 }], isCartOpen: true };
@@ -80,16 +89,17 @@ export const useStore = create(
       },
       setShippingAddress: (address) => set({ shippingAddress: address }),
 
-      // Orders State — orders are always fetched live from the API
+      // Orders State — orders are always fetched live from the API but local orders are saved as fallback
       orders: [],
-      placeOrder: () =>
-        set(() => ({
+      placeOrder: (order) =>
+        set((state) => ({
           cart: [], // Empty cart on place order
+          orders: order ? [order, ...state.orders] : state.orders,
         })),
     }),
     {
       name: "artistic-carpets-storage",
-      partialize: (state) => ({ cart: state.cart, wishlist: state.wishlist, user: state.user, token: state.token, shippingAddress: state.shippingAddress }),
+      partialize: (state) => ({ cart: state.cart, wishlist: state.wishlist, user: state.user, token: state.token, shippingAddress: state.shippingAddress, orders: state.orders }),
     }
   )
 );

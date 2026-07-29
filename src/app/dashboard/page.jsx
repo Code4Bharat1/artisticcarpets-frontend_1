@@ -216,7 +216,7 @@ export default function DashboardPage() {
 
           {/* Right Sidebar (Detail Cart) */}
           {activeTab === "payment" && (
-            <DetailCart cart={cart} removeFromCart={removeFromCart} updateCartQuantity={updateCartQuantity} placeOrder={useStore.getState().placeOrder} />
+            <DetailCart cart={cart} removeFromCart={removeFromCart} updateCartQuantity={updateCartQuantity} placeOrder={useStore.getState().placeOrder} setActiveTab={setActiveTab} />
           )}
         </div>
 
@@ -229,7 +229,7 @@ export default function DashboardPage() {
 // Sub-components mapped to layout
 // -------------------------------------------------------------
 
-function DetailCart({ cart, removeFromCart, updateCartQuantity, placeOrder }) {
+function DetailCart({ cart, removeFromCart, updateCartQuantity, placeOrder, setActiveTab }) {
   const router = useRouter();
   const subtotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
   const delivery = subtotal > 0 ? 20 : 0;
@@ -341,19 +341,25 @@ function DetailCart({ cart, removeFromCart, updateCartQuantity, placeOrder }) {
 
                     if (verifyRes.data.success) {
                       // Save order to backend
+                      const storeState = useStore.getState();
                       const orderPayload = {
                         items: cart.map(item => ({
                           productId: item.id || item._id,
                           quantity: item.quantity
                         })),
-                        paymentMethod: "razorpay"
+                        paymentMethod: "razorpay",
+                        shippingAddress: storeState.shippingAddress,
+                        customerName: storeState.user?.name || storeState.shippingAddress?.firstName || "Guest User",
+                        customerEmail: storeState.user?.email || storeState.shippingAddress?.email || "guest@example.com",
+                        customerPhone: storeState.user?.phone || storeState.shippingAddress?.phone || "0000000000"
                       };
                       const orderRes = await axiosInstance.post("/orders", orderPayload);
-                      const realOrder = orderRes.data?.order || {};
+                      const realOrder = orderRes.data?.data?.order || orderRes.data?.order || {};
 
                       alert(`Payment successful! Payment ID: ${response.razorpay_payment_id}`);
                       placeOrder({ ...realOrder, item: cart.length === 1 ? cart[0].name : `${cart.length} Items`, total: realOrder.total || total });
                       router.push("/dashboard?tab=activeOrders");
+                      if (setActiveTab) setActiveTab("activeOrders");
                     } else {
                       alert("Payment verification failed on the server.");
                     }
@@ -395,12 +401,20 @@ function DetailCart({ cart, removeFromCart, updateCartQuantity, placeOrder }) {
 }
 
 function ActiveOrdersTab() {
+  const localOrders = useStore(state => state.orders) || [];
   const [apiOrders, setApiOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
 
   useEffect(() => {
     const fetchOrders = async () => {
+      const token = useStore.getState().token;
+      if (!token) {
+        // Fallback to local orders if not fully authenticated
+        setApiOrders(localOrders);
+        setLoading(false);
+        return;
+      }
       try {
         const res = await axiosInstance.get("/orders/my");
         if (res.data && res.data.data) {
@@ -409,6 +423,7 @@ function ActiveOrdersTab() {
       } catch (error) {
         console.error("Failed to fetch orders:", error);
         setErrorMsg(error.message);
+        setApiOrders(localOrders);
       } finally {
         setLoading(false);
       }
@@ -583,10 +598,21 @@ function OrderHistoryTab() {
     setRefundModalOpen(true);
   };
 
-  const submitRefundRequest = (orderId, reason, description) => {
-    setHistory(history.map(o => o.id === orderId ? { ...o, refundStatus: "Pending" } : o));
-    setRefundModalOpen(false);
-    alert(`Refund request submitted for order ${orderId}`);
+  const submitRefundRequest = async (orderId, reason, description) => {
+    try {
+      const res = await axiosInstance.post(`/orders/${orderId}/refund`, {
+        reason,
+        comment: description
+      });
+      if (res.data.success) {
+        setHistory(history.map(o => (o.id === orderId || o._id === orderId) ? { ...o, refund: { ...o.refund, status: "Pending" } } : o));
+        setRefundModalOpen(false);
+        alert(`Refund request submitted successfully.`);
+      }
+    } catch (error) {
+      console.error("Failed to request refund:", error);
+      alert(error.response?.data?.message || "Failed to submit refund request.");
+    }
   };
 
   return (
@@ -638,14 +664,14 @@ function OrderHistoryTab() {
                   <button className="bg-[#1E1E1E] text-white px-5 py-2.5 rounded-xl font-sans text-xs font-semibold hover:bg-[#700B08] transition-colors shadow-sm">
                     Reorder
                   </button>
-                  {(order.refundStatus === "None" || !order.refundStatus) && order.status?.toLowerCase() === "delivered" && (
+                  {(order.refund?.status === "None" || !order.refund?.status) && ["delivered", "returned"].includes(order.status?.toLowerCase()) && order.refund?.enabled && (
                     <button onClick={() => openRefundModal(order)} className="bg-red-50 text-[#700B08] px-5 py-2.5 rounded-xl border border-red-200 font-sans text-xs font-semibold hover:bg-red-100 transition-colors shadow-sm">
                       Request Refund
                     </button>
                   )}
-                  {order.refundStatus && order.refundStatus !== "None" && (
-                    <span className={`inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full font-sans text-[10px] font-bold uppercase tracking-widest ${order.refundStatus === "Pending" ? "bg-yellow-50 text-yellow-700 border border-yellow-200" : order.refundStatus === "Approved" ? "bg-blue-50 text-blue-700 border border-blue-200" : order.refundStatus === "Refunded" ? "bg-green-50 text-green-700 border border-green-200" : "bg-gray-50 text-gray-700 border border-gray-200"}`}>
-                      Refund: {order.refundStatus}
+                  {order.refund?.status && order.refund?.status !== "None" && (
+                    <span className={`inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full font-sans text-[10px] font-bold uppercase tracking-widest ${order.refund.status === "Pending" ? "bg-yellow-50 text-yellow-700 border border-yellow-200" : order.refund.status === "Approved" ? "bg-blue-50 text-blue-700 border border-blue-200" : order.refund.status === "Refunded" ? "bg-green-50 text-green-700 border border-green-200" : "bg-gray-50 text-gray-700 border border-gray-200"}`}>
+                      Refund: {order.refund.status}
                     </span>
                   )}
                 </div>
@@ -659,7 +685,7 @@ function OrderHistoryTab() {
         <RefundModal 
           order={selectedOrder} 
           onClose={() => setRefundModalOpen(false)} 
-          onSubmit={submitRefundRequest} 
+          onSubmit={(reason, description) => submitRefundRequest(selectedOrder._id, reason, description)} 
         />
       )}
     </div>
@@ -673,7 +699,8 @@ function RefundModal({ order, onClose, onSubmit }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!reason) { alert("Please select a reason."); return; }
-    onSubmit(order.id, reason, description);
+    const orderIdToSubmit = order ? (order._id || order.id) : null;
+    onSubmit(orderIdToSubmit, reason, description);
   };
 
   return (
@@ -869,6 +896,13 @@ function PaymentTab() {
     { id: 2, type: 'visa', number: '**** **** **** 8831', holder: 'ALEXANDER STERLING', expiry: '04/27', isDefault: false },
   ]);
 
+  const [addresses, setAddresses] = useState([
+    { id: 1, type: 'Home', name: 'Alexander Sterling', address: '123 Luxury Avenue, Penthouse 4', city: 'Mumbai, Maharashtra 400001', isDefault: true }
+  ]);
+
+  const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [newAddressForm, setNewAddressForm] = useState({ type: 'Home', name: '', address: '', city: '' });
+
   const handleAddCard = () => {
     const newCard = {
       id: Date.now(),
@@ -886,8 +920,34 @@ function PaymentTab() {
     setCards(cards.filter(c => c.id !== id));
   };
 
+  const handleAddAddressSubmit = (e) => {
+    e.preventDefault();
+    const newAddress = {
+      id: Date.now(),
+      type: newAddressForm.type,
+      name: newAddressForm.name,
+      address: newAddressForm.address,
+      city: newAddressForm.city,
+      isDefault: addresses.length === 0,
+    };
+    setAddresses([...addresses, newAddress]);
+    setIsAddingAddress(false);
+    setNewAddressForm({ type: 'Home', name: '', address: '', city: '' });
+  };
+
+  const handleDeleteAddress = (id) => {
+    setAddresses(addresses.filter(a => a.id !== id));
+  };
+
+  const handleSetDefaultAddress = (id) => {
+    setAddresses(addresses.map(a => ({
+      ...a,
+      isDefault: a.id === id
+    })));
+  };
+
   return (
-    <div className="animate-fade-in max-w-4xl">
+    <div className="animate-fade-in max-w-4xl relative">
       <div className="mb-10 flex flex-col md:flex-row md:justify-between md:items-end gap-6">
         <div>
           <h2 className="font-serif text-3xl text-[#1E1E1E]">Payment Methods</h2>
@@ -899,7 +959,7 @@ function PaymentTab() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
         {cards.length === 0 && (
           <div className="col-span-full py-12 text-center bg-white border border-dashed border-[#E8E3DD] rounded-2xl">
             <CreditCard className="w-12 h-12 text-[#E8E3DD] mx-auto mb-4" />
@@ -957,15 +1017,161 @@ function PaymentTab() {
           </div>
         ))}
       </div>
+
+      <div className="mb-10 flex flex-col md:flex-row md:justify-between md:items-end gap-6 mt-12 border-t border-[#E8E3DD] pt-12">
+        <div>
+          <h2 className="font-serif text-3xl text-[#1E1E1E]">Billing Addresses</h2>
+          <p className="font-sans text-sm text-[#666666] mt-2">Manage your saved addresses for billing and shipping. (Max 2)</p>
+        </div>
+        {addresses.length < 2 && (
+          <button onClick={() => setIsAddingAddress(true)} className="bg-[#1E1E1E] hover:bg-black text-white px-6 py-3 rounded-xl font-sans text-sm font-semibold transition-colors shadow-md flex items-center space-x-2">
+            <MapPin className="w-4 h-4" />
+            <span>Add New Address</span>
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {addresses.length === 0 && (
+          <div className="col-span-full py-12 text-center bg-white border border-dashed border-[#E8E3DD] rounded-2xl">
+            <MapPin className="w-12 h-12 text-[#E8E3DD] mx-auto mb-4" />
+            <p className="font-sans text-[#999999]">No saved addresses found.</p>
+          </div>
+        )}
+
+        {addresses.map((addr) => (
+          <div key={addr.id} onClick={() => handleSetDefaultAddress(addr.id)} className={`${addr.isDefault ? "bg-[#faf9f5] border-2 border-[#1E1E1E]" : "bg-white border border-[#E8E3DD]"} rounded-2xl p-6 relative transition-shadow hover:shadow-lg group overflow-hidden cursor-pointer`}>
+            <div className="flex justify-between items-start mb-6 relative z-10">
+              <div className="flex items-center space-x-3">
+                <div className={`p-2 rounded-lg ${addr.isDefault ? 'bg-[#1E1E1E] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-sans font-bold text-[#1E1E1E]">{addr.type}</p>
+                  <p className="font-sans text-xs text-[#666666]">{addr.name}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                {addr.isDefault && (
+                  <span className="bg-[#1E1E1E] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">
+                    Default
+                  </span>
+                )}
+                {!addr.isDefault && (
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity flex space-x-2">
+                    <button onClick={(e) => e.stopPropagation()} className="p-2 bg-gray-50 rounded-lg text-[#666666] hover:text-[#1E1E1E] transition-colors"><Settings className="w-4 h-4" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteAddress(addr.id); }} className="p-2 bg-red-50 rounded-lg text-red-500 hover:text-red-700 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="relative z-10">
+              <p className="font-sans text-sm text-[#1E1E1E] mb-1">{addr.address}</p>
+              <p className="font-sans text-sm text-[#666666]">{addr.city}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {isAddingAddress && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md animate-scale-in">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-serif text-2xl text-[#1E1E1E]">Add New Address</h3>
+              <button onClick={() => setIsAddingAddress(false)} className="text-[#999999] hover:text-[#1E1E1E]"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleAddAddressSubmit} className="space-y-4">
+              <div>
+                <label className="block font-sans text-sm text-[#666666] mb-1">Address Type</label>
+                <select 
+                  className="w-full border border-[#E8E3DD] rounded-xl px-4 py-3 font-sans text-sm focus:outline-none focus:border-[#1E1E1E]"
+                  value={newAddressForm.type}
+                  onChange={(e) => setNewAddressForm({...newAddressForm, type: e.target.value})}
+                >
+                  <option value="Home">Home</option>
+                  <option value="Office">Office</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-sans text-sm text-[#666666] mb-1">Full Name</label>
+                <input 
+                  required
+                  type="text" 
+                  placeholder="e.g. John Doe"
+                  className="w-full border border-[#E8E3DD] rounded-xl px-4 py-3 font-sans text-sm focus:outline-none focus:border-[#1E1E1E]"
+                  value={newAddressForm.name}
+                  onChange={(e) => setNewAddressForm({...newAddressForm, name: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block font-sans text-sm text-[#666666] mb-1">Street Address</label>
+                <input 
+                  required
+                  type="text" 
+                  placeholder="e.g. 123 Luxury Avenue"
+                  className="w-full border border-[#E8E3DD] rounded-xl px-4 py-3 font-sans text-sm focus:outline-none focus:border-[#1E1E1E]"
+                  value={newAddressForm.address}
+                  onChange={(e) => setNewAddressForm({...newAddressForm, address: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block font-sans text-sm text-[#666666] mb-1">City, State & ZIP</label>
+                <input 
+                  required
+                  type="text" 
+                  placeholder="e.g. Mumbai, Maharashtra 400001"
+                  className="w-full border border-[#E8E3DD] rounded-xl px-4 py-3 font-sans text-sm focus:outline-none focus:border-[#1E1E1E]"
+                  value={newAddressForm.city}
+                  onChange={(e) => setNewAddressForm({...newAddressForm, city: e.target.value})}
+                />
+              </div>
+              <div className="pt-2">
+                <button type="submit" className="w-full bg-[#1E1E1E] hover:bg-black text-white px-6 py-3 rounded-xl font-sans text-sm font-semibold transition-colors">
+                  Save Address
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function RefundsTab() {
-  const [refunds, setRefunds] = useState([
-    { id: "REF-8472", orderId: "ORD-8472", date: "Sep 01, 2026", status: "Refunded", amount: 890, item: "Modern Geometric Runner" },
-    { id: "REF-9921", orderId: "ORD-9921", date: "Sep 20, 2026", status: "Pending", amount: 350, item: "Bohemian Jute Runner" }
-  ]);
+  const [refunds, setRefunds] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRefunds = async () => {
+      try {
+        const res = await axiosInstance.get("/orders/my");
+        if (res.data.success) {
+          const allOrders = res.data.data;
+          const refundOrders = allOrders.filter(o => o.refund && o.refund.status !== "None");
+          
+          const mappedRefunds = refundOrders.map(o => ({
+            id: o._id.substring(o._id.length - 6).toUpperCase(),
+            orderId: o.orderNumber,
+            date: new Date(o.refund.requestedAt || o.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: '2-digit' }),
+            status: o.refund.status,
+            amount: o.total,
+            item: o.items && o.items.length > 0 ? o.items[0].productName : "Unknown Item"
+          }));
+          
+          setRefunds(mappedRefunds);
+        }
+      } catch (error) {
+        console.error("Failed to fetch refunds:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRefunds();
+  }, []);
 
   return (
     <div className="animate-fade-in max-w-4xl">
@@ -974,38 +1180,44 @@ function RefundsTab() {
         <p className="font-sans text-sm text-[#666666] mt-2">Track the status of your refund requests.</p>
       </div>
 
-      <div className="space-y-6">
-        {refunds.map((refund) => (
-          <div key={refund.id} className="bg-white border border-[#E8E3DD] rounded-2xl p-6 hover:shadow-lg transition-shadow duration-300">
-            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-[#E8E3DD]/50 pb-5 mb-5">
-              <div>
-                <p className="font-sans text-xs font-bold text-[#999999] uppercase tracking-widest mb-1">Refund #{refund.id} • Order #{refund.orderId}</p>
-                <p className="font-sans text-sm font-medium text-[#1E1E1E]">Requested on {refund.date}</p>
-              </div>
-              <div className="text-left md:text-right flex flex-col md:items-end">
-                <p className="font-sans text-lg font-bold text-[#1E1E1E]">₹{refund.amount.toLocaleString()}</p>
-                <span className={`inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full font-sans text-[10px] font-bold uppercase tracking-widest ${refund.status === "Pending" ? "bg-yellow-50 text-yellow-700 border border-yellow-200" : refund.status === "Approved" ? "bg-blue-50 text-blue-700 border border-blue-200" : refund.status === "Refunded" ? "bg-green-50 text-green-700 border border-green-200" : "bg-gray-50 text-gray-700 border border-gray-200"}`}>
-                  {refund.status === "Refunded" ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                  {refund.status}
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-[#faf9f5] rounded-xl flex items-center justify-center border border-[#E8E3DD]">
-                  <RefreshCw className="w-6 h-6 text-[#999999]" />
+      {loading ? (
+        <p className="text-gray-500 font-sans animate-pulse">Loading refunds...</p>
+      ) : refunds.length === 0 ? (
+        <p className="text-[#666666] font-sans">You have no refund requests.</p>
+      ) : (
+        <div className="space-y-6">
+          {refunds.map((refund) => (
+            <div key={refund.id} className="bg-white border border-[#E8E3DD] rounded-2xl p-6 hover:shadow-lg transition-shadow duration-300">
+              <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-[#E8E3DD]/50 pb-5 mb-5">
+                <div>
+                  <p className="font-sans text-xs font-bold text-[#999999] uppercase tracking-widest mb-1">Refund #{refund.id} • Order #{refund.orderId}</p>
+                  <p className="font-sans text-sm font-medium text-[#1E1E1E]">Requested on {refund.date}</p>
                 </div>
-                <p className="font-sans text-sm text-[#1E1E1E] font-semibold">{refund.item}</p>
+                <div className="text-left md:text-right flex flex-col md:items-end">
+                  <p className="font-sans text-lg font-bold text-[#1E1E1E]">₹{refund.amount.toLocaleString()}</p>
+                  <span className={`inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full font-sans text-[10px] font-bold uppercase tracking-widest ${refund.status === "Pending" ? "bg-yellow-50 text-yellow-700 border border-yellow-200" : refund.status === "Approved" ? "bg-blue-50 text-blue-700 border border-blue-200" : refund.status === "Refunded" ? "bg-green-50 text-green-700 border border-green-200" : "bg-gray-50 text-gray-700 border border-gray-200"}`}>
+                    {refund.status === "Refunded" ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                    {refund.status}
+                  </span>
+                </div>
               </div>
-              <div className="flex gap-3">
-                <button className="px-5 py-2.5 rounded-xl border border-[#E8E3DD] font-sans text-xs font-semibold text-[#1E1E1E] hover:bg-[#faf9f5] transition-colors">
-                  View Details
-                </button>
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 bg-[#faf9f5] rounded-xl flex items-center justify-center border border-[#E8E3DD]">
+                    <RefreshCw className="w-6 h-6 text-[#999999]" />
+                  </div>
+                  <p className="font-sans text-sm text-[#1E1E1E] font-semibold">{refund.item}</p>
+                </div>
+                <div className="flex gap-3">
+                  <button className="px-5 py-2.5 rounded-xl border border-[#E8E3DD] font-sans text-xs font-semibold text-[#1E1E1E] hover:bg-[#faf9f5] transition-colors">
+                    View Details
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

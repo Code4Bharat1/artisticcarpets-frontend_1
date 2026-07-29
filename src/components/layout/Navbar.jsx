@@ -436,9 +436,15 @@ export default function Navbar() {
               <p className="text-xs text-text-secondary font-light mb-6">
                 Shipping and taxes calculated at checkout.
               </p>
-              <Link href="/dashboard?tab=payment" onClick={() => setCartOpen(false)}>
-                <Button variant="primary" className="w-full justify-center">Proceed to Checkout</Button>
-              </Link>
+              {cart.some(item => (item.stock !== undefined && item.stock <= 0) || (item.availableStock !== undefined && item.availableStock <= 0)) ? (
+                <div className="text-sm text-red-500 mb-4 font-medium text-center">
+                  Some items in your cart are out of stock. Please remove them to proceed.
+                </div>
+              ) : (
+                <Link href="/dashboard?tab=payment" onClick={() => setCartOpen(false)}>
+                  <Button variant="primary" className="w-full justify-center">Proceed to Checkout</Button>
+                </Link>
+              )}
             </div>
           )}
         </div>
