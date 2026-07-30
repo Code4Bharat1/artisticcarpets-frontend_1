@@ -50,7 +50,6 @@ export default function DashboardPage() {
         { id: "payment", label: "Payments", icon: CreditCard },
         { id: "orderHistory", label: "Order History", icon: Package },
         { id: "complaints", label: "Complaints", icon: HelpCircle },
-        { id: "refunds", label: "Refunds", icon: RefreshCw },
       ]
     }
   ];
@@ -68,7 +67,6 @@ export default function DashboardPage() {
       case "orderHistory": return <OrderHistoryTab />;
       case "payment": return <PaymentTab />;
       case "complaints": return <ComplaintsTab />;
-      case "refunds": return <RefundsTab />;
       default: return <div className="p-10 font-sans text-gray-500 text-center">Section under construction...</div>;
     }
   };
@@ -590,32 +588,6 @@ function OrderHistoryTab() {
   }, []);
 
   const displayHistory = history;
-
-  const [refundModalOpen, setRefundModalOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-
-  const openRefundModal = (order) => {
-    setSelectedOrder(order);
-    setRefundModalOpen(true);
-  };
-
-  const submitRefundRequest = async (orderId, reason, description) => {
-    try {
-      const res = await axiosInstance.post(`/orders/${orderId}/refund`, {
-        reason,
-        comment: description
-      });
-      if (res.data.success) {
-        setHistory(history.map(o => (o.id === orderId || o._id === orderId) ? { ...o, refund: { ...o.refund, status: "Pending" } } : o));
-        setRefundModalOpen(false);
-        alert(`Refund request submitted successfully.`);
-      }
-    } catch (error) {
-      console.error("Failed to request refund:", error);
-      alert(error.response?.data?.message || "Failed to submit refund request.");
-    }
-  };
-
   return (
     <div className="animate-fade-in max-w-4xl">
       <div className="mb-10">
@@ -665,30 +637,12 @@ function OrderHistoryTab() {
                   <button className="bg-[#1E1E1E] text-white px-5 py-2.5 rounded-xl font-sans text-xs font-semibold hover:bg-[#700B08] transition-colors shadow-sm">
                     Reorder
                   </button>
-                  {(order.refund?.status === "None" || !order.refund?.status) && ["delivered", "returned"].includes(order.status?.toLowerCase()) && order.refund?.enabled && (
-                    <button onClick={() => openRefundModal(order)} className="bg-red-50 text-[#700B08] px-5 py-2.5 rounded-xl border border-red-200 font-sans text-xs font-semibold hover:bg-red-100 transition-colors shadow-sm">
-                      Request Refund
-                    </button>
-                  )}
-                  {order.refund?.status && order.refund?.status !== "None" && (
-                    <span className={`inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full font-sans text-[10px] font-bold uppercase tracking-widest ${order.refund.status === "Pending" ? "bg-yellow-50 text-yellow-700 border border-yellow-200" : order.refund.status === "Approved" ? "bg-blue-50 text-blue-700 border border-blue-200" : order.refund.status === "Refunded" ? "bg-green-50 text-green-700 border border-green-200" : "bg-gray-50 text-gray-700 border border-gray-200"}`}>
-                      Refund: {order.refund.status}
-                    </span>
-                  )}
                 </div>
               </div>
             </div>
           );
         })}
       </div>
-
-      {refundModalOpen && selectedOrder && (
-        <RefundModal 
-          order={selectedOrder} 
-          onClose={() => setRefundModalOpen(false)} 
-          onSubmit={(reason, description) => submitRefundRequest(selectedOrder._id, reason, description)} 
-        />
-      )}
     </div>
   );
 }

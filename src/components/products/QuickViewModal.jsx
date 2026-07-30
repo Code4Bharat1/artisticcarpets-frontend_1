@@ -130,12 +130,6 @@ export default function QuickViewModal() {
                         {detail}
                       </li>
                     ))}
-                    <li className="flex items-center text-xs text-text-secondary font-light">
-                      <Check className="w-3.5 h-3.5 text-primary-brand mr-2 flex-shrink-0 stroke-[2.5]" />
-                      {quickViewProduct.refundPolicy?.enabled 
-                        ? `Refund: Available within ${quickViewProduct.refundPolicy.refundWindow || 7} days` 
-                        : 'Refund: Non-refundable'}
-                    </li>
                   </ul>
                 </div>
                 );
