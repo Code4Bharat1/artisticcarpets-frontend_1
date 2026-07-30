@@ -8,6 +8,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Container from "@/components/common/Container";
 import { useStore } from "@/store/useStore";
+import axiosInstance from "@/services/axiosInstance";
 
 export default function ProductDetailsPage({ params }) {
   const { slug } = use(params);
@@ -22,9 +23,8 @@ export default function ProductDetailsPage({ params }) {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const res = await fetch(`/api/products/${slug}`);
-        if (!res.ok) throw new Error("Product not found");
-        const data = await res.json();
+        const res = await axiosInstance.get(`/products/${slug}`);
+        const data = res.data;
         setProduct(data.data?.product);
       } catch (err) {
         setError(err.message);
@@ -63,7 +63,8 @@ export default function ProductDetailsPage({ params }) {
   const getImgUrl = (path) => {
     if (!path) return "";
     if (path.startsWith("http://") || path.startsWith("https://")) return path;
-    return `http://localhost:5000${path}`;
+    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace("/api", "");
+    return `${baseUrl}${path}`;
   };
 
   const mainImg = product.thumbnail?.path 

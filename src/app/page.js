@@ -9,7 +9,8 @@ import Footer from "@/components/layout/Footer";
 export default async function Home() {
   let cmsData = null;
   try {
-    const res = await fetch("http://localhost:5000/api/cms/homepage", { cache: "no-store" });
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+    const res = await fetch(`${baseUrl}/cms/homepage`, { cache: "no-store" });
     if (res.ok) {
       const json = await res.json();
       cmsData = json.page;

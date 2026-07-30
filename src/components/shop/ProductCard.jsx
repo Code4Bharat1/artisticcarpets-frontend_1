@@ -47,7 +47,8 @@ export default function ProductCard({ product, priority = false }) {
   const getImgUrl = (path) => {
     if (!path) return "";
     if (path.startsWith("http://") || path.startsWith("https://")) return path;
-    return `http://localhost:5000${path}`;
+    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace("/api", "");
+    return `${baseUrl}${path}`;
   };
 
   // Image logic

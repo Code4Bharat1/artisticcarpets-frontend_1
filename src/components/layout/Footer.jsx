@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Instagram, Mail, Globe } from "lucide-react";
 import Link from "next/link";
 import Container from "@/components/common/Container";
+import axiosInstance from "@/services/axiosInstance";
 
 export default function Footer() {
   const [footerLinks, setFooterLinks] = useState({ instagram: "#", facebook: "#", email: "#" });
@@ -10,9 +11,9 @@ export default function Footer() {
   useEffect(() => {
     const fetchFooterData = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:5000/api/cms/homepage");
-        if (res.ok) {
-          const json = await res.json();
+        const res = await axiosInstance.get("/cms/homepage");
+        if (res.data) {
+          const json = res.data;
           const footSec = json.page?.sections?.find(s => s.sectionKey === "footer");
           if (footSec && footSec.data) {
             setFooterLinks({

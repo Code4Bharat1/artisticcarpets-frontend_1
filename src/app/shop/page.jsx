@@ -9,6 +9,7 @@ import ShopHeader from "@/components/shop/ShopHeader";
 import ProductGrid from "@/components/shop/ProductGrid";
 import Pagination from "@/components/shop/Pagination";
 import Navbar from "@/components/layout/Navbar";
+import axiosInstance from "@/services/axiosInstance";
 
 
 function ShopContent() {
@@ -35,9 +36,8 @@ function ShopContent() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch("/api/products?status=active&limit=500"); // Fetch all active for client-side filtering
-        if (!res.ok) throw new Error("Failed to fetch products");
-        const data = await res.json();
+        const res = await axiosInstance.get("/products?status=active&limit=500");
+        const data = res.data;
         setProducts(data.data?.products || []);
       } catch (err) {
         setError(err.message);
