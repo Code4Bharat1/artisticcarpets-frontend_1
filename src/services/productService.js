@@ -5,7 +5,7 @@ export const fetchProducts = async (ids = []) => {
     if (ids && ids.length > 0) {
       url += `&ids=${ids.join(",")}`;
     } else {
-      url += "&sort=newest&limit=6";
+      url += "&sort=bestselling&limit=6";
     }
 
     const res = await fetch(url);
