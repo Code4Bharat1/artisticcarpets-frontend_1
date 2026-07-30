@@ -1,7 +1,8 @@
 // Fetch latest products from our actual backend
 export const fetchProducts = async (ids = []) => {
   try {
-    let url = "/api/products?status=active";
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+    let url = `${baseUrl}/products?status=active`;
     if (ids && ids.length > 0) {
       url += `&ids=${ids.join(",")}`;
     } else {
