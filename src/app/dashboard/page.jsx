@@ -6,7 +6,7 @@ import { useStore } from "@/store/useStore";
 import {
   User, Package, CreditCard, LogOut, ChevronRight, Settings,
   Truck, ShoppingBag, Search, MapPin, Bell, Heart, LayoutGrid,
-  Tag, Inbox, HeadphonesIcon, Sliders, Plus, Minus, Menu, X, Trash2, HelpCircle, CheckCircle, AlertCircle, RefreshCw
+  Tag, Inbox, HeadphonesIcon, Sliders, Plus, Minus, Menu, X, Trash2, HelpCircle, CheckCircle, AlertCircle, RefreshCw, XCircle
 } from "lucide-react";
 import Link from "next/link";
 import Script from "next/script";
@@ -439,25 +439,33 @@ function ActiveOrdersTab() {
     if (!status) return "0%";
     const s = status.toLowerCase().replace(/_/g, " ");
     if (["ordered", "pending", "confirmed", "processing"].includes(s)) return "0%";
-    if (s === "shipped") return "50%";
-    if (["out for delivery", "delivered"].includes(s)) return "100%";
+    if (s === "shipped") return "33%";
+    if (s === "out for delivery") return "66%";
+    if (s === "delivered") return "100%";
     return "0%";
   };
 
   const getStepState = (status, stepIndex) => {
     if (!status) return stepIndex === 0;
     const s = status.toLowerCase().replace(/_/g, " ");
-    const steps = ["ordered", "shipped", "out for delivery"];
+    const steps = ["ordered", "shipped", "out for delivery", "delivered"];
     
     let mapped = s;
     if (["pending", "confirmed", "processing"].includes(s)) mapped = "ordered";
-    else if (s === "delivered") mapped = "out for delivery";
     
     const currentIdx = steps.indexOf(mapped) !== -1 ? steps.indexOf(mapped) : 0;
     return stepIndex <= currentIdx;
   };
 
-  return (
+  const getStatusStyles = (status) => {
+    if (!status) return "bg-gray-50 text-gray-700 border border-gray-200";
+    const s = status.toLowerCase();
+    if (["pending", "confirmed", "processing"].includes(s)) return "bg-yellow-50 text-yellow-700 border border-yellow-200";
+    if (["shipped", "out_for_delivery"].includes(s)) return "bg-blue-50 text-blue-700 border border-blue-200";
+    if (s === "delivered") return "bg-green-50 text-green-700 border border-green-200";
+    if (["cancelled", "returned", "refunded"].includes(s)) return "bg-red-50 text-red-700 border border-red-200";
+    return "bg-gray-50 text-gray-700 border border-gray-200";
+  };
     <div className="animate-fade-in max-w-4xl">
       <div className="mb-10">
         <h2 className="font-serif text-3xl text-[#1E1E1E]">My Active Orders</h2>
@@ -536,6 +544,12 @@ function ActiveOrdersTab() {
                       </span>
                       <p className={`mt-4 text-xs font-bold uppercase tracking-wider text-center w-24 ${step3Active ? 'text-[#700B08]' : 'text-[#999999]'}`}>Out for Delivery</p>
                     </div>
+                    <div className="flex flex-col items-center">
+                      <span className={`h-12 w-12 rounded-full flex items-center justify-center ring-8 ring-white shadow-md transition-colors ${getStepState(order.status, 3) ? 'bg-[#700B08] text-white' : 'bg-white border-2 border-[#E8E3DD] text-[#999999]'}`}>
+                        <CheckCircle className="h-5 w-5" />
+                      </span>
+                      <p className={`mt-4 text-xs font-bold uppercase tracking-wider text-center w-24 ${getStepState(order.status, 3) ? 'text-[#700B08]' : 'text-[#999999]'}`}>Delivered</p>
+                    </div>
                   </div>
                 </div>
 
@@ -559,7 +573,8 @@ function ActiveOrdersTab() {
         </div>
       )}
     </div>
-  );
+  
+
 }
 
 function OrderHistoryTab() {
@@ -612,8 +627,8 @@ function OrderHistoryTab() {
                 </div>
                 <div className="text-left md:text-right flex flex-col md:items-end">
                   <p className="font-sans text-lg font-bold text-[#1E1E1E]">₹{(order.total || 0).toLocaleString()}</p>
-                  <span className={`inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full font-sans text-[10px] font-bold uppercase tracking-widest ${order.status?.toLowerCase() === "delivered" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
-                    {order.status?.toLowerCase() === "delivered" ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                  <span className={`inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full font-sans text-[10px] font-bold uppercase tracking-widest ${order.status?.toLowerCase() === "delivered" ? "bg-green-50 text-green-700 border border-green-200" : ["cancelled", "returned", "refunded"].includes(order.status?.toLowerCase()) ? "bg-red-50 text-red-700 border border-red-200" : ["shipped", "out_for_delivery"].includes(order.status?.toLowerCase()) ? "bg-blue-50 text-blue-700 border border-blue-200" : "bg-yellow-50 text-yellow-700 border border-yellow-200"}`}>
+                    {order.status?.toLowerCase() === "delivered" ? <CheckCircle className="w-3 h-3" /> : ["cancelled", "returned", "refunded"].includes(order.status?.toLowerCase()) ? <XCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
                     {displayStatus}
                   </span>
                 </div>
