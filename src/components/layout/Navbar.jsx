@@ -31,6 +31,8 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearchingProducts, setIsSearchingProducts] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
@@ -59,6 +61,29 @@ export default function Navbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Live search debounce effect
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (searchQuery.trim().length > 1) {
+        setIsSearchingProducts(true);
+        try {
+          const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+          const res = await fetch(`${baseUrl}/products?search=${encodeURIComponent(searchQuery.trim())}&limit=5`);
+          const data = await res.json();
+          setSearchResults(data.data?.products || []);
+        } catch (error) {
+          console.error("Live search error:", error);
+          setSearchResults([]);
+        } finally {
+          setIsSearchingProducts(false);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Close user dropdown menu when clicking outside
   useEffect(() => {
@@ -106,12 +131,14 @@ export default function Navbar() {
 
           {/* Desktop Nav Links */}
           <nav className="hidden md:flex items-center space-x-8">
-            {["Home", "Shop", "Collections", "About", "Contact"].map((item) => {
+            {["Home", "Shop", "Collections", "Gallery", "About", "Contact"].map((item) => {
               const href =
                 item === "Home"
                   ? "/"
                   : item === "Shop"
                   ? "/shop"
+                  : item === "Gallery"
+                  ? "/gallery"
                   : item === "About"
                   ? "/about"
                   : item === "Contact"
@@ -260,12 +287,14 @@ export default function Navbar() {
         } transition-transform duration-300 md:hidden pt-24 px-6 flex flex-col justify-between pb-8`}
       >
         <nav className="flex flex-col space-y-6 text-center mt-6">
-          {["Home", "Shop", "Collections", "About", "Contact"].map((item) => {
+          {["Home", "Shop", "Collections", "Gallery", "About", "Contact"].map((item) => {
             const href =
               item === "Home"
                 ? "/"
                 : item === "Shop"
                 ? "/shop"
+                : item === "Gallery"
+                ? "/gallery"
                 : item === "About"
                 ? "/about"
                 : item === "Contact"
@@ -350,6 +379,40 @@ export default function Navbar() {
             {searchQuery && (
               <div className="mt-4 text-xs text-text-secondary">
                 Press Enter to search for <span className="font-semibold text-text-primary">"{searchQuery}"</span>
+              </div>
+            )}
+            
+            {/* Live Search Results */}
+            {searchQuery.trim().length > 1 && (
+              <div className="mt-4 max-h-64 overflow-y-auto pr-2 scrollbar-hide">
+                {isSearchingProducts ? (
+                  <div className="text-sm text-text-secondary py-4 text-center">Searching...</div>
+                ) : searchResults.length > 0 ? (
+                  <div className="space-y-4">
+                    {searchResults.map((product) => (
+                      <Link 
+                        key={product.id || product._id}
+                        href={`/shop/${product.slug}`}
+                        onClick={() => setSearchOpen(false)}
+                        className="flex items-center gap-4 group"
+                      >
+                        <div className="w-12 h-12 bg-collection-bg rounded-md overflow-hidden flex-shrink-0">
+                          <img 
+                            src={getProductImage(product)} 
+                            alt={product.title} 
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" 
+                          />
+                        </div>
+                        <div>
+                          <h4 className="font-serif text-sm text-text-primary group-hover:text-primary-brand transition-colors">{product.title}</h4>
+                          <p className="font-sans text-xs text-text-secondary">₹{product.price.toLocaleString()}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-text-secondary py-4 text-center">No products found matching "{searchQuery}"</div>
+                )}
               </div>
             )}
           </div>
@@ -469,7 +532,10 @@ export default function Navbar() {
             <div className="text-center py-20 my-auto">
               <Heart className="w-12 h-12 text-text-secondary/40 mx-auto mb-4 stroke-[1]" />
               <p className="font-sans text-sm text-text-secondary">Your wishlist is currently empty.</p>
-              <Button variant="secondary" className="mt-6 animate-pulse" onClick={() => setWishlistOpen(false)}>
+              <Button variant="secondary" className="mt-6 animate-pulse" onClick={() => {
+                setWishlistOpen(false);
+                router.push("/shop");
+              }}>
                 Explore Rugs
               </Button>
             </div>

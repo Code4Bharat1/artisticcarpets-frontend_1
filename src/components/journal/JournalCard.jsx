@@ -30,15 +30,7 @@ export default function JournalCard({ article }) {
         </p>
 
         {/* Read More Link */}
-        <div className="pt-2">
-          <Link
-            href="#"
-            className="inline-flex items-center text-[10px] font-bold tracking-widest uppercase text-text-primary group-hover:text-primary-brand border-b border-text-primary/10 group-hover:border-primary-brand pb-1 transition-all duration-300"
-          >
-            Read More
-            <span className="ml-2 transform group-hover:translate-x-1 transition-transform duration-300">→</span>
-          </Link>
-        </div>
+      
       </div>
     </article>
   );

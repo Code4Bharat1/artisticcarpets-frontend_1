@@ -1,6 +1,7 @@
 import "./globals.css";
 import QueryProvider from "@/components/providers/QueryProvider";
 import QuickViewModal from "@/components/products/QuickViewModal";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
 export const metadata = {
   title: "Artistic Carpets | Handwoven Luxury Rugs",
@@ -31,10 +32,12 @@ export default function RootLayout({ children }) {
         suppressHydrationWarning
         className="min-h-full flex flex-col bg-[#FCF9F8] text-[#1E1E1E]"
       >
-        <QueryProvider>
-          {children}
-          <QuickViewModal />
-        </QueryProvider>
+        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID_HERE"}>
+          <QueryProvider>
+            {children}
+            <QuickViewModal />
+          </QueryProvider>
+        </GoogleOAuthProvider>
       </body>
     </html>
   );

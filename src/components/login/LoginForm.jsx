@@ -6,13 +6,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/store/useStore";
 import { loginSchema, yupResolver } from "@/schemas/loginSchema";
-import { loginUser } from "@/services/authService";
+import { loginUser, googleAuth } from "@/services/authService";
+import ForgotPasswordModal from "./ForgotPasswordModal";
+import { useGoogleLogin } from "@react-oauth/google";
 
 export default function LoginForm() {
   const router = useRouter();
   const { login } = useStore();
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState("");
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
 
   const {
     register,
@@ -40,13 +43,32 @@ export default function LoginForm() {
     }
   };
 
-  const handleSocialLogin = (provider) => {
-    login({
-      name: `${provider} User`,
-      email: `user@${provider.toLowerCase()}.com`,
-    });
-    router.push("/dashboard");
-  };
+
+
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      setServerError("");
+      try {
+        // Send access token to backend
+        const response = await googleAuth(tokenResponse.id_token || tokenResponse.access_token);
+        if (response.success) {
+          login(response.user, response.token);
+          router.push("/");
+        } else {
+          setServerError(response.message || "Google login failed.");
+        }
+      } catch (err) {
+        setServerError(err.response?.data?.message || "Google login failed.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: (error) => {
+      console.error("Google login error", error);
+      setServerError("Google authentication failed. Please try again or check your client ID.");
+    },
+  });
 
   return (
     <div className="relative w-full lg:w-1/2 min-h-full bg-white flex flex-col justify-center px-5 sm:px-10 lg:px-14 py-8 sm:py-12">
@@ -106,12 +128,13 @@ export default function LoginForm() {
               >
                 PASSWORD
               </label>
-              <Link
-                href="#"
-                className="font-sans text-xs font-semibold text-[#980E0A] hover:underline"
+              <button
+                type="button"
+                onClick={() => setIsForgotModalOpen(true)}
+                className="font-sans text-xs font-semibold text-[#980E0A] hover:underline cursor-pointer"
               >
                 Forgot Password?
-              </Link>
+              </button>
             </div>
             <input
               id="password"
@@ -157,8 +180,8 @@ export default function LoginForm() {
         <div className="w-full">
           <button
             type="button"
-            onClick={() => handleSocialLogin("Google")}
-            className="w-full flex items-center justify-center space-x-2 py-3 px-4 bg-[#faf9f5]  border border-[#E8E3DD] rounded-xl hover:border-[#980E0A] hover:bg-white font-sans text-xs font-semibold text-[#1E1E1E] transition-all duration-200 shadow-2xs cursor-pointer"
+            onClick={() => loginWithGoogle()}
+            className="w-full flex items-center justify-center space-x-2 py-3 px-4 bg-[#faf9f5] border border-[#E8E3DD] rounded-xl hover:border-[#980E0A] hover:bg-white font-sans text-xs font-semibold text-[#1E1E1E] transition-all duration-200 shadow-2xs cursor-pointer"
           >
             <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
               <path
@@ -198,6 +221,11 @@ export default function LoginForm() {
         <div className="border-2 border-[#C4A892] rounded-xs" />
         <div className="border-2 border-[#C4A892] rounded-xs" />
       </div>
+      
+      <ForgotPasswordModal 
+        isOpen={isForgotModalOpen} 
+        onClose={() => setIsForgotModalOpen(false)} 
+      />
     </div>
   );
 }

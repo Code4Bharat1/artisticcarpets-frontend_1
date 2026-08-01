@@ -31,7 +31,7 @@ function ShopContent() {
     page: 1
   });
 
-  const ITEMS_PER_PAGE = 12;
+  const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
     const fetchProducts = async () => {

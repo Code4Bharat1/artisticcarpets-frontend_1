@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 
 export const useStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({
       // Cart State
       cart: [],
       isCartOpen: false,
@@ -44,15 +44,28 @@ export const useStore = create(
       // Wishlist State
       wishlist: [],
       isWishlistOpen: false,
-      toggleWishlist: (product) =>
+      toggleWishlist: async (product) => {
+        const pId = product.id || product._id;
+        // Optimistic UI update
         set((state) => {
-          const pId = product.id || product._id;
           const exists = state.wishlist.some((item) => (item.id || item._id) === pId);
           if (exists) {
             return { wishlist: state.wishlist.filter((item) => (item.id || item._id) !== pId) };
           }
           return { wishlist: [...state.wishlist, { ...product, id: pId }] };
-        }),
+        });
+
+        // Sync with backend if logged in
+        const token = get().token;
+        if (token) {
+          try {
+            const axiosInstance = (await import("@/services/axiosInstance")).default;
+            await axiosInstance.post(`/users/wishlist/${pId}`);
+          } catch (error) {
+            console.error("Failed to sync wishlist with backend:", error);
+          }
+        }
+      },
       setWishlistOpen: (isOpen) => set({ isWishlistOpen: isOpen }),
 
       // Search Modal State
@@ -68,7 +81,7 @@ export const useStore = create(
       token: null,
       isAuthModalOpen: false,
       setAuthModalOpen: (isOpen) => set({ isAuthModalOpen: isOpen }),
-      login: (userData, token) =>
+      login: async (userData, token) => {
         set({
           user: userData || {
             name: "Alexander Sterling",
@@ -76,7 +89,21 @@ export const useStore = create(
           },
           token: token || null,
           isAuthModalOpen: false,
-        }),
+        });
+
+        // Fetch user's wishlist from backend
+        if (token) {
+          try {
+            const axiosInstance = (await import("@/services/axiosInstance")).default;
+            const res = await axiosInstance.get("/users/wishlist");
+            if (res.data?.data?.wishlist) {
+              set({ wishlist: res.data.data.wishlist.map(p => ({ ...p, id: p._id })) });
+            }
+          } catch (err) {
+            console.error("Error fetching wishlist on login", err);
+          }
+        }
+      },
       logout: () => set({ user: null, token: null }),
 
       // Checkout State

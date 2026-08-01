@@ -22,7 +22,7 @@ export default function Journal({ data }) {
             </p>
           </div>
           <Link
-            href="#journal"
+            href="/journal"
             className="group inline-flex items-center text-xs font-semibold tracking-widest uppercase text-text-primary hover:text-primary-brand mt-4 md:mt-0 transition-colors duration-300"
           >
             Explore Journal
@@ -32,7 +32,7 @@ export default function Journal({ data }) {
 
         {/* Journal Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {articlesList.map((article, index) => (
+          {articlesList.slice(0, 3).map((article, index) => (
             <JournalCard key={article.id || index} article={article} />
           ))}
         </div>

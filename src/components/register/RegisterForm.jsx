@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/store/useStore";
 import { registerSchema, yupResolver } from "@/schemas/registerSchema";
-import { registerUser } from "@/services/authService";
+import { registerUser, googleAuth } from "@/services/authService";
+import { useGoogleLogin } from "@react-oauth/google";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -48,13 +49,35 @@ export default function RegisterForm() {
     }
   };
 
-  const handleSocialRegister = (provider) => {
-    login({
-      name: `${provider} User`,
-      email: `user@${provider.toLowerCase()}.com`,
-    });
-    router.push("/");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      setServerError("");
+      try {
+        // Send access token to backend
+        const response = await googleAuth(tokenResponse.id_token || tokenResponse.access_token);
+        if (response.success) {
+          login(response.user, response.token);
+          router.push("/");
+        } else {
+          setServerError(response.message || "Google registration failed.");
+        }
+      } catch (err) {
+        setServerError(err.response?.data?.message || "Google registration failed.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: (error) => {
+      console.error("Google login error", error);
+      setServerError("Google authentication failed. Please try again or check your client ID.");
+    },
+  });
 
   return (
     <div className="relative w-full lg:w-1/2 min-h-full bg-[#fbf4f4] flex flex-col justify-center px-5 sm:px-10 lg:px-14 py-8 sm:py-12">
@@ -209,7 +232,7 @@ export default function RegisterForm() {
         <div className="w-full">
           <button
             type="button"
-            onClick={() => handleSocialRegister("Google")}
+            onClick={() => loginWithGoogle()}
             className="w-full flex items-center justify-center space-x-2 py-3 px-4 bg-[#FFFDF7] border border-[#E8E3DD] rounded-xl hover:border-[#980E0A] hover:bg-white font-sans text-xs font-semibold text-[#1E1E1E] transition-all duration-200 shadow-2xs cursor-pointer"
           >
             <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
