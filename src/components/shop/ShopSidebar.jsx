@@ -53,7 +53,8 @@ export default function ShopSidebar({
   filters, 
   setFilters, 
   isOpen, 
-  setIsOpen 
+  setIsOpen,
+  categories = []
 }) {
   const [localPrice, setLocalPrice] = useState(filters.priceRange);
   const [openSection, setOpenSection] = useState("Price");
@@ -84,6 +85,14 @@ export default function ShopSidebar({
         : [...prev.materials, mat];
       return { ...prev, materials: newMaterials, page: 1 };
     });
+  };
+
+  const handleCategoryChange = (categoryName) => {
+    setFilters(prev => ({
+      ...prev,
+      category: prev.category === categoryName ? null : categoryName,
+      page: 1
+    }));
   };
 
   const handleSizeChange = (size) => {
@@ -138,6 +147,37 @@ export default function ShopSidebar({
           onTouchEnd={handlePriceRelease}
           className="w-full accent-[#7B1E1E] h-1 bg-[#E8DCD3] rounded-lg appearance-none cursor-pointer"
         />
+      </AccordionSection>
+
+      {/* Category Filter */}
+      <AccordionSection
+        title="Category"
+        isOpen={openSection === "Category"}
+        onToggle={() => toggleSection("Category")}
+        isActive={filters.category !== null}
+      >
+        <div className="flex flex-col gap-3 font-sans text-sm">
+          {categories.map(cat => (
+            <label key={cat._id} className="flex items-center gap-3 cursor-pointer group">
+              <input 
+                type="checkbox" 
+                className="hidden" 
+                checked={filters.category === cat.name} 
+                onChange={() => handleCategoryChange(cat.name)} 
+              />
+              <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${
+                filters.category === cat.name ? 'bg-[#7B1E1E] border-[#7B1E1E]' : 'border-[#E8DCD3] group-hover:border-[#7B1E1E]'
+              }`}>
+                {filters.category === cat.name && (
+                  <svg width="12" height="10" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 5L4.5 8.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+              <span className={filters.category === cat.name ? "font-semibold" : ""}>{cat.name}</span>
+            </label>
+          ))}
+        </div>
       </AccordionSection>
 
       {/* Material Filter */}

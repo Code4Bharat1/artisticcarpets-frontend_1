@@ -112,179 +112,176 @@ export default function Navbar() {
       {/* Main Navbar */}
       {pathname !== "/dashboard" && (
         <header
-          className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
-            isScrolled
+          className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${isScrolled
               ? "bg-brand-white/95 backdrop-blur-md border-b border-border-custom shadow-sm py-4"
               : "bg-transparent py-6"
-          }`}
+            }`}
         >
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center">
-            {/* The user needs to save their uploaded logo as public/images/logo.png */}
-            <img 
-              src="/logo2.jpeg" 
-              alt="Artistic Carpets" 
-              className="h-14 w-auto object-contain"
-            />
-          </Link>
+          <div className="max-w-7xl mx-auto px-6 lg:px-8 flex items-center justify-between">
+            {/* Logo */}
+            <Link href="/" className="flex items-center">
+              {/* The user needs to save their uploaded logo as public/images/logo.png */}
+              <img
+                src="/logo2.jpeg"
+                alt="Artistic Carpets"
+                className="h-14 w-auto object-contain"
+              />
+            </Link>
 
-          {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center space-x-8">
-            {["Home", "Shop", "Collections", "Gallery", "About", "Contact"].map((item) => {
-              const href =
-                item === "Home"
-                  ? "/"
-                  : item === "Shop"
-                  ? "/shop"
-                  : item === "Gallery"
-                  ? "/gallery"
-                  : item === "About"
-                  ? "/about"
-                  : item === "Contact"
-                  ? "/contact"
-                  : item === "Collections"
-                  ? "/collections"
-                  : `/#${item.toLowerCase()}`;
-              const isActive = pathname === href;
+            {/* Desktop Nav Links */}
+            <nav className="hidden md:flex items-center space-x-8">
+              {["Home", "Shop", "Collections", "Gallery", "About", "Contact"].map((item) => {
+                const href =
+                  item === "Home"
+                    ? "/"
+                    : item === "Shop"
+                      ? "/shop"
+                      : item === "Gallery"
+                        ? "/gallery"
+                        : item === "About"
+                          ? "/about"
+                          : item === "Contact"
+                            ? "/contact"
+                            : item === "Collections"
+                              ? "/collections"
+                              : `/#${item.toLowerCase()}`;
+                const isActive = pathname === href;
 
-              return (
-                <Link
-                  key={item}
-                  href={href}
-                  className={`font-sans text-xs uppercase tracking-widest transition-colors duration-200 ${
-                    isActive
-                      ? "text-[#980E0A] border-b-2 border-[#980E0A] font-semibold pb-1"
-                      : "text-text-primary/80 hover:text-primary-brand"
-                  }`}
-                >
-                  {item}
-                </Link>
-              );
-            })}
-          </nav>
+                return (
+                  <Link
+                    key={item}
+                    href={href}
+                    className={`font-sans text-xs uppercase tracking-widest transition-colors duration-200 ${isActive
+                        ? "text-[#980E0A] border-b-2 border-[#980E0A] font-semibold pb-1"
+                        : "text-text-primary/80 hover:text-primary-brand"
+                      }`}
+                  >
+                    {item}
+                  </Link>
+                );
+              })}
+            </nav>
 
-          {/* Action Controls & Auth Buttons */}
-          <div className="flex items-center space-x-4 md:space-x-5">
-            {/* 1. Search Icon */}
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="text-text-primary hover:text-primary-brand transition-colors p-1"
-              aria-label="Search"
-            >
-              <Search className="w-5 h-5 stroke-[1.5]" />
-            </button>
-
-            {/* 2. Wishlist Icon */}
-            <button
-              onClick={() => setWishlistOpen(true)}
-              className="relative text-text-primary hover:text-primary-brand transition-colors p-1"
-              aria-label="Wishlist"
-            >
-              <Heart className="w-5 h-5 stroke-[1.5]" />
-              {wishlist.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary-brand text-brand-white text-[9px] font-bold flex items-center justify-center rounded-full">
-                  {wishlist.length}
-                </span>
-              )}
-            </button>
-
-            {/* 3. Cart Icon */}
-            <button
-              onClick={() => setCartOpen(true)}
-              className="relative text-text-primary hover:text-primary-brand transition-colors p-1"
-              aria-label="Cart"
-            >
-              <ShoppingBag className="w-5 h-5 stroke-[1.5]" />
-              {totalCartItems > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary-brand text-brand-white text-[9px] font-bold flex items-center justify-center rounded-full">
-                  {totalCartItems}
-                </span>
-              )}
-            </button>
-
-            {/* 4. Profile Symbol (Shown ONLY when LOGGED IN - positioned at far right of navbar) */}
-            {user && (
-              <div className="relative" ref={userMenuRef}>
-                <button
-                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center space-x-1 text-text-primary hover:text-primary-brand transition-colors p-1 group"
-                  aria-label="User Profile"
-                >
-                  <div className="w-8 h-8 rounded-full bg-[#980E0A] text-white flex items-center justify-center font-serif text-sm font-semibold shadow-xs group-hover:scale-105 transition-transform">
-                    {user.name ? user.name[0].toUpperCase() : <User className="w-4 h-4" />}
-                  </div>
-                  <ChevronDown className="w-3.5 h-3.5 text-text-secondary group-hover:text-primary-brand transition-colors" />
-                </button>
-
-                {/* User Dropdown Menu */}
-                {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-xl border border-[#E8E3DD] py-3 z-50 animate-fade-in">
-                    <div className="px-4 py-2 border-b border-[#E8E3DD]/60">
-                      <p className="font-serif text-sm font-semibold text-text-primary truncate">
-                        {user.name}
-                      </p>
-                      <p className="font-sans text-[11px] text-text-secondary truncate">
-                        {user.email}
-                      </p>
-                    </div>
-
-                    <div className="py-1">
-                      <Link
-                        href="/dashboard"
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className="block px-4 py-2 font-sans text-xs text-text-primary hover:bg-[#FAF7F5] hover:text-[#980E0A] transition-colors"
-                      >
-                        My Dashboard
-                      </Link>
-                      
-                    </div>
-
-                    <div className="border-t border-[#E8E3DD]/60 pt-1">
-                      <button
-                        onClick={() => {
-                          logout();
-                          setIsUserMenuOpen(false);
-                        }}
-                        className="w-full text-left px-4 py-2 font-sans text-xs text-red-600 hover:bg-red-50 flex items-center space-x-2 transition-colors"
-                      >
-                        <LogOut className="w-3.5 h-3.5" />
-                        <span>Log Out</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 5. Login Button (Shown ONLY BEFORE LOGIN - positioned at far right of navbar, hidden when logged in) */}
-            {!user && (
-              <Link
-                href="/login"
-                className="hidden sm:inline-flex items-center justify-center font-sans text-xs uppercase tracking-wider text-[#980E0A] border border-[#980E0A] hover:bg-[#980E0A] hover:text-white px-4 py-1.5 rounded-full transition-all duration-300 font-semibold shadow-xs ml-1"
+            {/* Action Controls & Auth Buttons */}
+            <div className="flex items-center space-x-4 md:space-x-5">
+              {/* 1. Search Icon */}
+              <button
+                onClick={() => setSearchOpen(true)}
+                className="text-text-primary hover:text-primary-brand transition-colors p-1"
+                aria-label="Search"
               >
-                LOGIN
-              </Link>
-            )}
+                <Search className="w-5 h-5 stroke-[1.5]" />
+              </button>
 
-            {/* 6. Mobile Menu Toggle */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden text-text-primary hover:text-primary-brand transition-colors p-1"
-              aria-label="Toggle menu"
-            >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+              {/* 2. Wishlist Icon */}
+              <button
+                onClick={() => setWishlistOpen(true)}
+                className="relative text-text-primary hover:text-primary-brand transition-colors p-1"
+                aria-label="Wishlist"
+              >
+                <Heart className="w-5 h-5 stroke-[1.5]" />
+                {wishlist.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary-brand text-brand-white text-[9px] font-bold flex items-center justify-center rounded-full">
+                    {wishlist.length}
+                  </span>
+                )}
+              </button>
+
+              {/* 3. Cart Icon */}
+              <button
+                onClick={() => setCartOpen(true)}
+                className="relative text-text-primary hover:text-primary-brand transition-colors p-1"
+                aria-label="Cart"
+              >
+                <ShoppingBag className="w-5 h-5 stroke-[1.5]" />
+                {totalCartItems > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary-brand text-brand-white text-[9px] font-bold flex items-center justify-center rounded-full">
+                    {totalCartItems}
+                  </span>
+                )}
+              </button>
+
+              {/* 4. Profile Symbol (Shown ONLY when LOGGED IN - positioned at far right of navbar) */}
+              {user && (
+                <div className="relative" ref={userMenuRef}>
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center space-x-1 text-text-primary hover:text-primary-brand transition-colors p-1 group"
+                    aria-label="User Profile"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-[#980E0A] text-white flex items-center justify-center font-serif text-sm font-semibold shadow-xs group-hover:scale-105 transition-transform">
+                      {user.name ? user.name[0].toUpperCase() : <User className="w-4 h-4" />}
+                    </div>
+                    <ChevronDown className="w-3.5 h-3.5 text-text-secondary group-hover:text-primary-brand transition-colors" />
+                  </button>
+
+                  {/* User Dropdown Menu */}
+                  {isUserMenuOpen && (
+                    <div className="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-xl border border-[#E8E3DD] py-3 z-50 animate-fade-in">
+                      <div className="px-4 py-2 border-b border-[#E8E3DD]/60">
+                        <p className="font-serif text-sm font-semibold text-text-primary truncate">
+                          {user.name}
+                        </p>
+                        <p className="font-sans text-[11px] text-text-secondary truncate">
+                          {user.email}
+                        </p>
+                      </div>
+
+                      <div className="py-1">
+                        <Link
+                          href="/dashboard"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="block px-4 py-2 font-sans text-xs text-text-primary hover:bg-[#FAF7F5] hover:text-[#980E0A] transition-colors"
+                        >
+                          My Dashboard
+                        </Link>
+
+                      </div>
+
+                      <div className="border-t border-[#E8E3DD]/60 pt-1">
+                        <button
+                          onClick={() => {
+                            logout();
+                            setIsUserMenuOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-2 font-sans text-xs text-red-600 hover:bg-red-50 flex items-center space-x-2 transition-colors"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Log Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 5. Login Button (Shown ONLY BEFORE LOGIN - positioned at far right of navbar, hidden when logged in) */}
+              {!user && (
+                <Link
+                  href="/login"
+                  className="hidden sm:inline-flex items-center justify-center font-sans text-xs uppercase tracking-wider text-[#980E0A] border border-[#980E0A] hover:bg-[#980E0A] hover:text-white px-4 py-1.5 rounded-full transition-all duration-300 font-semibold shadow-xs ml-1"
+                >
+                  LOGIN
+                </Link>
+              )}
+
+              {/* 6. Mobile Menu Toggle */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden text-text-primary hover:text-primary-brand transition-colors p-1"
+                aria-label="Toggle menu"
+              >
+                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
       )}
 
       {/* Mobile Menu Drawer */}
       <div
-        className={`fixed inset-0 z-30 bg-brand-white transform ${
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        } transition-transform duration-300 md:hidden pt-24 px-6 flex flex-col justify-between pb-8`}
+        className={`fixed inset-0 z-30 bg-brand-white transform ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+          } transition-transform duration-300 md:hidden pt-24 px-6 flex flex-col justify-between pb-8`}
       >
         <nav className="flex flex-col space-y-6 text-center mt-6">
           {["Home", "Shop", "Collections", "Gallery", "About", "Contact"].map((item) => {
@@ -292,14 +289,14 @@ export default function Navbar() {
               item === "Home"
                 ? "/"
                 : item === "Shop"
-                ? "/shop"
-                : item === "Gallery"
-                ? "/gallery"
-                : item === "About"
-                ? "/about"
-                : item === "Contact"
-                ? "/contact"
-                : `/#${item.toLowerCase()}`;
+                  ? "/shop"
+                  : item === "Gallery"
+                    ? "/gallery"
+                    : item === "About"
+                      ? "/about"
+                      : item === "Contact"
+                        ? "/contact"
+                        : `/#${item.toLowerCase()}`;
             const isActive = pathname === href;
 
             return (
@@ -307,9 +304,8 @@ export default function Navbar() {
                 key={item}
                 href={href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`font-serif text-2xl transition-colors ${
-                  isActive ? "text-[#980E0A] font-semibold" : "text-text-primary hover:text-primary-brand"
-                }`}
+                className={`font-serif text-2xl transition-colors ${isActive ? "text-[#980E0A] font-semibold" : "text-text-primary hover:text-primary-brand"
+                  }`}
               >
                 {item}
               </Link>
@@ -381,7 +377,7 @@ export default function Navbar() {
                 Press Enter to search for <span className="font-semibold text-text-primary">"{searchQuery}"</span>
               </div>
             )}
-            
+
             {/* Live Search Results */}
             {searchQuery.trim().length > 1 && (
               <div className="mt-4 max-h-64 overflow-y-auto pr-2 scrollbar-hide">
@@ -390,17 +386,17 @@ export default function Navbar() {
                 ) : searchResults.length > 0 ? (
                   <div className="space-y-4">
                     {searchResults.map((product) => (
-                      <Link 
+                      <Link
                         key={product.id || product._id}
                         href={`/shop/${product.slug}`}
                         onClick={() => setSearchOpen(false)}
                         className="flex items-center gap-4 group"
                       >
                         <div className="w-12 h-12 bg-collection-bg rounded-md overflow-hidden flex-shrink-0">
-                          <img 
-                            src={getProductImage(product)} 
-                            alt={product.title} 
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" 
+                          <img
+                            src={getProductImage(product)}
+                            alt={product.title}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                           />
                         </div>
                         <div>
@@ -421,9 +417,8 @@ export default function Navbar() {
 
       {/* Cart Drawer */}
       <div
-        className={`fixed inset-y-0 right-0 z-50 w-full max-w-md bg-brand-white shadow-2xl border-l border-border-custom transform ${
-          isCartOpen ? "translate-x-0" : "translate-x-full"
-        } transition-transform duration-300 ease-in-out`}
+        className={`fixed inset-y-0 right-0 z-50 w-full max-w-md bg-brand-white shadow-2xl border-l border-border-custom transform ${isCartOpen ? "translate-x-0" : "translate-x-full"
+          } transition-transform duration-300 ease-in-out`}
       >
         <div className="h-full flex flex-col justify-between p-6 md:p-8">
           <div>
@@ -516,9 +511,8 @@ export default function Navbar() {
 
       {/* Wishlist Drawer */}
       <div
-        className={`fixed inset-y-0 right-0 z-50 w-full max-w-md bg-brand-white shadow-2xl border-l border-border-custom transform ${
-          isWishlistOpen ? "translate-x-0" : "translate-x-full"
-        } transition-transform duration-300 ease-in-out`}
+        className={`fixed inset-y-0 right-0 z-50 w-full max-w-md bg-brand-white shadow-2xl border-l border-border-custom transform ${isWishlistOpen ? "translate-x-0" : "translate-x-full"
+          } transition-transform duration-300 ease-in-out`}
       >
         <div className="h-full flex flex-col p-6 md:p-8">
           <div className="flex items-center justify-between border-b border-border-custom pb-4 mb-6">

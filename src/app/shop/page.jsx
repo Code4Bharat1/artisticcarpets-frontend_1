@@ -17,6 +17,7 @@ function ShopContent() {
   const searchParam = searchParams.get("search");
 
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -25,6 +26,7 @@ function ShopContent() {
   const [filters, setFilters] = useState({
     priceRange: 5000,
     materials: [],
+    category: null,
     size: null,
     color: null,
     shape: null,
@@ -34,18 +36,21 @@ function ShopContent() {
   const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       try {
-        const res = await axiosInstance.get("/products?status=active&limit=500");
-        const data = res.data;
-        setProducts(data.data?.products || []);
+        const [prodRes, catRes] = await Promise.all([
+          axiosInstance.get("/products?status=active&limit=500"),
+          axiosInstance.get("/categories")
+        ]);
+        setProducts(prodRes.data.data?.products || []);
+        setCategories(catRes.data.data || []);
       } catch (err) {
         setError(err.message);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchProducts();
+    fetchData();
   }, []);
 
   // Filtering Logic
@@ -62,6 +67,7 @@ function ShopContent() {
       }
       
       if (product.price > filters.priceRange) return false;
+      if (filters.category && product.category !== filters.category) return false;
       if (filters.materials.length > 0 && !filters.materials.includes(product.material)) return false;
       if (filters.size && product.size !== filters.size) return false;
       if (filters.color && product.color !== filters.color) return false;
@@ -140,6 +146,7 @@ function ShopContent() {
             setFilters={setFilters}
             isOpen={isMobileFiltersOpen}
             setIsOpen={setIsMobileFiltersOpen}
+            categories={categories}
           />
 
           {/* Main Content */}
@@ -169,7 +176,7 @@ function ShopContent() {
               <div className="py-20 text-center text-[#666]">
                 <p className="text-xl">No products found matching your filters.</p>
                 <button 
-                  onClick={() => setFilters({ priceRange: 5000, materials: [], size: null, color: null, shape: null, page: 1 })}
+                  onClick={() => setFilters({ priceRange: 5000, category: null, materials: [], size: null, color: null, shape: null, page: 1 })}
                   className="mt-4 px-6 py-2 bg-[#7B1E1E] text-white rounded-lg hover:bg-[#5A1616] transition"
                 >
                   Clear Filters
