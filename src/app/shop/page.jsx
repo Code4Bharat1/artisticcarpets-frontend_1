@@ -17,7 +17,6 @@ function ShopContent() {
   const searchParam = searchParams.get("search");
 
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -25,32 +24,29 @@ function ShopContent() {
   const [currentSort, setCurrentSort] = useState("featured");
   const [filters, setFilters] = useState({
     priceRange: 5000,
+    categories: [],
     materials: [],
-    category: null,
     size: null,
     color: null,
     shape: null,
     page: 1
   });
 
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 12;
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProducts = async () => {
       try {
-        const [prodRes, catRes] = await Promise.all([
-          axiosInstance.get("/products?status=active&limit=500"),
-          axiosInstance.get("/categories")
-        ]);
-        setProducts(prodRes.data.data?.products || []);
-        setCategories(catRes.data.data || []);
+        const res = await axiosInstance.get("/products?status=active&limit=500");
+        const data = res.data;
+        setProducts(data.data?.products || []);
       } catch (err) {
         setError(err.message);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchData();
+    fetchProducts();
   }, []);
 
   // Filtering Logic
@@ -65,9 +61,20 @@ function ShopContent() {
           return false;
         }
       }
-      
+
       if (product.price > filters.priceRange) return false;
-      if (filters.category && product.category !== filters.category) return false;
+      
+      if (filters.categories.length > 0) {
+        const matchesCat = filters.categories.some(c => {
+          const dbCat = (product.category || "").toLowerCase().trim();
+          const filterCat = c.toLowerCase().trim();
+          // Exact or partial match to handle old DB entries (e.g. "Persian" vs "PERSIAN RUG")
+          const firstWord = filterCat.split(" ")[0];
+          return dbCat === filterCat || dbCat.includes(filterCat) || filterCat.includes(dbCat) || (firstWord.length > 3 && dbCat.includes(firstWord));
+        });
+        if (!matchesCat) return false;
+      }
+
       if (filters.materials.length > 0 && !filters.materials.includes(product.material)) return false;
       if (filters.size && product.size !== filters.size) return false;
       if (filters.color && product.color !== filters.color) return false;
@@ -97,10 +104,10 @@ function ShopContent() {
   // Pagination Logic
   const totalItems = sortedProducts.length;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
-  
+
   // Ensure current page is valid after filtering
   const currentPage = Math.min(filters.page, Math.max(1, totalPages));
-  
+
   const currentProducts = sortedProducts.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
@@ -112,7 +119,7 @@ function ShopContent() {
   if (isLoading) {
     return (
       <div className="pt-32 pb-24 min-h-screen flex flex-col items-center justify-center bg-[#FAF7F4]">
-        <Navbar/>
+        <Navbar />
         <Loader2 className="w-10 h-10 animate-spin text-[#7B1E1E]" />
         <p className="mt-4 text-[#666]">Loading Collections...</p>
       </div>
@@ -122,36 +129,35 @@ function ShopContent() {
   if (error) {
     return (
       <div className="pt-32 pb-24 min-h-screen flex flex-col items-center justify-center bg-[#FAF7F4] text-red-500">
-        <Navbar/>
+        <Navbar />
         <p>Error: {error}</p>
       </div>
     );
   }
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
       className="pt-32 pb-24 bg-[#FAF7F4] min-h-screen font-sans"
     >
-      <Navbar/>
+      <Navbar />
       <Container>
         <div className="flex flex-col lg:flex-row gap-8 xl:gap-12">
-          
+
           {/* Sidebar */}
-          <ShopSidebar 
+          <ShopSidebar
             filters={filters}
             setFilters={setFilters}
             isOpen={isMobileFiltersOpen}
             setIsOpen={setIsMobileFiltersOpen}
-            categories={categories}
           />
 
           {/* Main Content */}
           <div className="flex-1 w-full lg:max-w-[calc(100%-320px-3rem)]">
-            <ShopHeader 
+            <ShopHeader
               totalItems={totalItems}
               startItem={startItem}
               endItem={endItem}
@@ -161,7 +167,7 @@ function ShopContent() {
 
             {/* Mobile Filter Button */}
             <div className="lg:hidden mb-6 flex justify-end">
-              <button 
+              <button
                 onClick={() => setIsMobileFiltersOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-white border border-[#E8DCD3] rounded-[12px] text-[#2B2B2B] font-semibold hover:border-[#7B1E1E] hover:text-[#7B1E1E] transition-colors shadow-sm"
               >
@@ -175,27 +181,27 @@ function ShopContent() {
             ) : (
               <div className="py-20 text-center text-[#666]">
                 <p className="text-xl">No products found matching your filters.</p>
-                <button 
-                  onClick={() => setFilters({ priceRange: 5000, category: null, materials: [], size: null, color: null, shape: null, page: 1 })}
+                <button
+                  onClick={() => setFilters({ priceRange: 5000, categories: [], materials: [], size: null, color: null, shape: null, page: 1 })}
                   className="mt-4 px-6 py-2 bg-[#7B1E1E] text-white rounded-lg hover:bg-[#5A1616] transition"
                 >
                   Clear Filters
                 </button>
               </div>
             )}
-            
+
             {totalPages > 1 && (
-              <Pagination 
-                currentPage={currentPage} 
-                totalPages={totalPages} 
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
                 onPageChange={(page) => {
                   setFilters(prev => ({ ...prev, page }));
                   window.scrollTo({ top: 0, behavior: 'smooth' });
-                }} 
+                }}
               />
             )}
           </div>
-          
+
         </div>
       </Container>
     </motion.div>

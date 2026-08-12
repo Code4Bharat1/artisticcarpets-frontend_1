@@ -48,11 +48,11 @@ export default function GalleryPage() {
   const toggleLike = async (e, id) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Optimistic UI update
     const isLiked = liked[id];
     setLiked({ ...liked, [id]: !isLiked });
-    
+
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
       await fetch(`${baseUrl}/gallery/${id}/like`, { method: "POST" });
@@ -72,7 +72,7 @@ export default function GalleryPage() {
   return (
     <div className="bg-brand-white min-h-screen font-sans">
       <Navbar />
-     
+
 
       {/* Instagram Integration Section */}
       <section className="bg-brand-offwhite py-24 border-t border-border-custom">
@@ -81,11 +81,11 @@ export default function GalleryPage() {
           <p className="text-text-secondary text-lg max-w-2xl mx-auto mb-12">
             Stay updated with our latest projects, behind-the-scenes craftsmanship, and design inspiration on Instagram.
           </p>
-          
+
           <InstagramGallery />
         </div>
       </section>
-      
+
       <Footer />
     </div>
   );

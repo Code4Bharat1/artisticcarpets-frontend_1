@@ -18,7 +18,7 @@ export default function QuickViewModal() {
   const rating = quickViewProduct.ratingAverage || quickViewProduct.rating || 0;
   const reviews = quickViewProduct.ratingCount || quickViewProduct.reviews || 0;
   const description = quickViewProduct.description || quickViewProduct.shortDescription;
-  
+
   const getImgUrl = (path) => {
     if (!path) return "";
     if (path.startsWith("http://") || path.startsWith("https://")) return path;
@@ -26,11 +26,11 @@ export default function QuickViewModal() {
     return `${baseUrl}${path}`;
   };
 
-  const mainImg = quickViewProduct.thumbnail?.path 
+  const mainImg = quickViewProduct.thumbnail?.path
     ? getImgUrl(quickViewProduct.thumbnail.path)
-    : (quickViewProduct.images && quickViewProduct.images.length > 0 
-        ? getImgUrl(quickViewProduct.images[0].path)
-        : (quickViewProduct.image || "https://images.unsplash.com/photo-1600166898232-2c9018300e0a?q=80&w=800&auto=format&fit=crop"));
+    : (quickViewProduct.images && quickViewProduct.images.length > 0
+      ? getImgUrl(quickViewProduct.images[0].path)
+      : (quickViewProduct.image || "https://images.unsplash.com/photo-1600166898232-2c9018300e0a?q=80&w=800&auto=format&fit=crop"));
 
   let badge = quickViewProduct.badge;
   if (!badge) {
@@ -115,23 +115,23 @@ export default function QuickViewModal() {
                   quickViewProduct.origin && `Origin: ${quickViewProduct.origin}`,
                   quickViewProduct.weavingType && `Weaving: ${quickViewProduct.weavingType}`,
                 ].filter(Boolean);
-                
+
                 if (details.length === 0) return null;
-                
+
                 return (
                   <div className="space-y-2 pt-2">
-                  <h4 className="font-serif text-[10px] font-bold tracking-widest uppercase text-text-primary">
-                    Product Specifications
-                  </h4>
-                  <ul className="space-y-1.5">
-                    {details.map((detail, idx) => (
-                      <li key={idx} className="flex items-center text-xs text-text-secondary font-light">
-                        <Check className="w-3.5 h-3.5 text-primary-brand mr-2 flex-shrink-0 stroke-[2.5]" />
-                        {detail}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                    <h4 className="font-serif text-[10px] font-bold tracking-widest uppercase text-text-primary">
+                      Product Specifications
+                    </h4>
+                    <ul className="space-y-1.5">
+                      {details.map((detail, idx) => (
+                        <li key={idx} className="flex items-center text-xs text-text-secondary font-light">
+                          <Check className="w-3.5 h-3.5 text-primary-brand mr-2 flex-shrink-0 stroke-[2.5]" />
+                          {detail}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 );
               })()}
             </div>

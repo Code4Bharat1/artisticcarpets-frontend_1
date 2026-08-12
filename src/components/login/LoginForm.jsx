@@ -59,7 +59,7 @@ export default function LoginForm() {
           setServerError(response.message || "Google login failed.");
         }
       } catch (err) {
-        setServerError(err.response?.data?.message || "Google login failed.");
+        setServerError(err.message || "Google login failed.");
       } finally {
         setLoading(false);
       }
