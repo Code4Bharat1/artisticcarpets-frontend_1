@@ -1,12 +1,9 @@
 import Container from "@/components/common/Container";
-import JournalCard from "@/components/journal/JournalCard";
-import { JOURNAL_ARTICLES as DEFAULT_ARTICLES } from "@/constants/data";
 import Link from "next/link";
 
 export default function Journal({ data }) {
   const title = data?.title || "From Our Journal";
   const subtitle = data?.content || "Craft narratives, design advice, and weaver spotlights.";
-  const articlesList = data?.data?.articles?.length ? data.data.articles : DEFAULT_ARTICLES;
 
   return (
     <section id="journal" className="bg-brand-white py-24 border-t border-border-custom/50">
@@ -30,11 +27,32 @@ export default function Journal({ data }) {
           </Link>
         </div>
 
-        {/* Journal Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {articlesList.slice(0, 3).map((article, index) => (
-            <JournalCard key={article.id || index} article={article} />
-          ))}
+        {/* Process Video */}
+        <div
+          style={{
+            borderRadius: "12px",
+            overflow: "hidden",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.12)",
+            background: "#000",
+            lineHeight: 0,
+          }}
+        >
+          <video
+            src="/Process Vedio/Artistic Carpets Video.mp4"
+            controls
+            autoPlay
+            muted
+            loop
+            playsInline
+            style={{
+              width: "100%",
+              display: "block",
+              maxHeight: "600px",
+              objectFit: "cover",
+            }}
+          >
+            Your browser does not support the video tag.
+          </video>
         </div>
       </Container>
     </section>

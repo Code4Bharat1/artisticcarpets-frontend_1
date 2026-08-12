@@ -49,10 +49,6 @@ export default function RegisterForm() {
     }
   };
 
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loginWithGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
