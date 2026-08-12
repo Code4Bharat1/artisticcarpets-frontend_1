@@ -18,7 +18,7 @@ export default function JournalCard({ article }) {
         <span className="font-sans text-[10px] font-bold tracking-[0.2em] text-primary-brand uppercase">
           {article.category}
         </span>
-        
+
         {/* Title */}
         <h3 className="font-serif text-lg md:text-xl text-text-primary font-medium group-hover:text-primary-brand transition-colors duration-300 leading-snug">
           {article.title}
@@ -29,8 +29,6 @@ export default function JournalCard({ article }) {
           {article.snippet}
         </p>
 
-        {/* Read More Link */}
-      
       </div>
     </article>
   );
