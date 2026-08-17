@@ -23,7 +23,7 @@ function ShopContent() {
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [currentSort, setCurrentSort] = useState("featured");
   const [filters, setFilters] = useState({
-    priceRange: 5000,
+    priceRange: 500000, // High default to not hide anything initially
     categories: [],
     materials: [],
     size: null,
@@ -39,7 +39,16 @@ function ShopContent() {
       try {
         const res = await axiosInstance.get("/products?status=active&limit=500");
         const data = res.data;
-        setProducts(data.data?.products || []);
+        const fetchedProducts = data.data?.products || [];
+        setProducts(fetchedProducts);
+        
+        // Dynamically adjust price filter max if needed
+        if (fetchedProducts.length > 0) {
+           const maxP = Math.max(...fetchedProducts.map(p => p.price || 0));
+           if (maxP > 500000) {
+             setFilters(prev => ({ ...prev, priceRange: maxP }));
+           }
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -75,10 +84,8 @@ function ShopContent() {
         if (!matchesCat) return false;
       }
 
-      if (filters.materials.length > 0 && !filters.materials.includes(product.material)) return false;
-      if (filters.size && product.size !== filters.size) return false;
+      if (filters.size && !(product.variants && product.variants.some(v => v.size === filters.size))) return false;
       if (filters.color && product.color !== filters.color) return false;
-      if (filters.shape && product.shape !== filters.shape) return false;
       return true;
     });
   }, [filters, products, searchParam]);
@@ -149,6 +156,7 @@ function ShopContent() {
 
           {/* Sidebar */}
           <ShopSidebar
+            products={products}
             filters={filters}
             setFilters={setFilters}
             isOpen={isMobileFiltersOpen}
@@ -182,7 +190,7 @@ function ShopContent() {
               <div className="py-20 text-center text-[#666]">
                 <p className="text-xl">No products found matching your filters.</p>
                 <button
-                  onClick={() => setFilters({ priceRange: 5000, categories: [], materials: [], size: null, color: null, shape: null, page: 1 })}
+                  onClick={() => setFilters({ priceRange: 500000, categories: [], materials: [], size: null, color: null, shape: null, page: 1 })}
                   className="mt-4 px-6 py-2 bg-[#7B1E1E] text-white rounded-lg hover:bg-[#5A1616] transition"
                 >
                   Clear Filters

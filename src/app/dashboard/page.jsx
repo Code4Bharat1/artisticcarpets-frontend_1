@@ -229,7 +229,12 @@ export default function DashboardPage() {
 
 function DetailCart({ cart, removeFromCart, updateCartQuantity, placeOrder, setActiveTab }) {
   const router = useRouter();
-  const subtotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
+  const getPrice = (item) => {
+    const variant = item.selectedVariant;
+    if (variant) return variant.discountPrice || variant.price;
+    return item.discountPrice || item.price;
+  };
+  const subtotal = cart.reduce((total, item) => total + getPrice(item) * item.quantity, 0);
   const delivery = subtotal > 0 ? 20 : 0;
   const taxes = subtotal > 0 ? 5 : 0;
   const total = subtotal + delivery + taxes;
@@ -253,7 +258,7 @@ function DetailCart({ cart, removeFromCart, updateCartQuantity, placeOrder, setA
             <p className="text-[#666666] font-sans text-sm">Your cart is empty</p>
           </div>
         ) : cart.map((item) => (
-          <div key={item.id} className="flex gap-4 p-3 bg-white rounded-2xl border border-[#E8E3DD] hover:border-[#C4A892] transition-colors">
+          <div key={item.cartItemId || item.id} className="flex gap-4 p-3 bg-white rounded-2xl border border-[#E8E3DD] hover:border-[#C4A892] transition-colors">
             <div className="w-16 h-16 bg-[#faf9f5] rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden">
               <img 
                 src={(() => {
@@ -269,13 +274,16 @@ function DetailCart({ cart, removeFromCart, updateCartQuantity, placeOrder, setA
               />
             </div>
             <div className="flex-1 flex flex-col justify-center min-w-0">
-              <h4 className="font-sans text-sm font-semibold text-[#1E1E1E] truncate">{item.name}</h4>
-              <p className="font-sans text-xs font-bold text-[#666666] mt-1">₹{item.price}</p>
+              <h4 className="font-sans text-sm font-semibold text-[#1E1E1E] truncate">{item.name || item.title}</h4>
+              {item.selectedVariant && (
+                <p className="font-sans text-[10px] text-[#666666]">Size: {item.selectedVariant.size}</p>
+              )}
+              <p className="font-sans text-xs font-bold text-[#666666] mt-1">₹{getPrice(item)}</p>
             </div>
             <div className="flex flex-col justify-between items-center bg-[#faf9f5] rounded-lg p-1 border border-[#E8E3DD]/50">
-              <button onClick={() => updateCartQuantity(item.id, item.quantity + 1)} className="w-5 h-5 bg-white rounded flex items-center justify-center shadow-sm text-[#1E1E1E] hover:text-[#700B08]"><Plus className="w-3 h-3" /></button>
+              <button onClick={() => updateCartQuantity(item.cartItemId || item.id, item.quantity + 1)} className="w-5 h-5 bg-white rounded flex items-center justify-center shadow-sm text-[#1E1E1E] hover:text-[#700B08]"><Plus className="w-3 h-3" /></button>
               <span className="text-[10px] font-bold">{item.quantity}</span>
-              <button onClick={() => updateCartQuantity(item.id, Math.max(1, item.quantity - 1))} className="w-5 h-5 bg-white rounded flex items-center justify-center shadow-sm text-[#1E1E1E] hover:text-[#700B08]"><Minus className="w-3 h-3" /></button>
+              <button onClick={() => updateCartQuantity(item.cartItemId || item.id, Math.max(1, item.quantity - 1))} className="w-5 h-5 bg-white rounded flex items-center justify-center shadow-sm text-[#1E1E1E] hover:text-[#700B08]"><Minus className="w-3 h-3" /></button>
             </div>
           </div>
         ))}
@@ -344,7 +352,10 @@ function DetailCart({ cart, removeFromCart, updateCartQuantity, placeOrder, setA
                       const orderPayload = {
                         items: cart.map(item => ({
                           productId: item.id || item._id,
-                          quantity: item.quantity
+                          quantity: item.quantity,
+                          variant: item.selectedVariant ? item.selectedVariant._id : undefined,
+                          size: item.selectedVariant ? item.selectedVariant.size : undefined,
+                          price: getPrice(item)
                         })),
                         paymentMethod: "razorpay",
                         shippingAddress: storeState.shippingAddress,

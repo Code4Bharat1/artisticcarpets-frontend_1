@@ -163,13 +163,14 @@ export default function ProductCard({ product, priority = false }) {
         </div>
 
         <p className="font-sans text-sm text-[#666666] mb-4">
-          {subtitle}{size ? `, ${size}` : ""}
+          {subtitle}
         </p>
 
         <div className="mt-auto font-sans font-semibold text-lg flex items-center gap-2">
           {discountPrice ? (
             <>
               <span className="text-[#980E0A]">
+                {product.variants && product.variants.length > 0 && <span className="text-sm font-normal mr-1">From</span>}
                 ₹{discountPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </span>
               <span className="text-[#999] text-sm line-through font-normal">
@@ -178,6 +179,7 @@ export default function ProductCard({ product, priority = false }) {
             </>
           ) : (
             <span className="text-[#980E0A]">
+              {product.variants && product.variants.length > 0 && <span className="text-sm font-normal mr-1">From</span>}
               ₹{price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>
           )}

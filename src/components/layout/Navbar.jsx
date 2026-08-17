@@ -97,7 +97,14 @@ export default function Navbar() {
   }, []);
 
   const totalCartItems = cart.reduce((total, item) => total + item.quantity, 0);
-  const cartSubtotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
+  
+  const getPrice = (item) => {
+    const variant = item.selectedVariant;
+    if (variant) return variant.discountPrice || variant.price;
+    return item.discountPrice || item.price;
+  };
+  
+  const cartSubtotal = cart.reduce((total, item) => total + getPrice(item) * item.quantity, 0);
 
   const getProductImage = (item) => {
     const path = item.thumbnail?.path || (item.images && item.images[0]?.path) || item.image;
@@ -440,7 +447,7 @@ export default function Navbar() {
             ) : (
               <div className="space-y-6 max-h-[55vh] overflow-y-auto pr-2 scrollbar-hide">
                 {cart.map((item) => (
-                  <div key={item.id} className="flex gap-4 border-b border-border-custom/50 pb-6">
+                  <div key={item.cartItemId || item.id} className="flex gap-4 border-b border-border-custom/50 pb-6">
                     <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-collection-bg flex-shrink-0">
                       <img src={getProductImage(item)} alt={item.title || item.name} className="w-full h-full object-cover" />
                     </div>
@@ -449,32 +456,35 @@ export default function Navbar() {
                         <div className="flex justify-between items-start">
                           <h4 className="font-serif text-sm font-medium text-text-primary">{item.title || item.name}</h4>
                           <button
-                            onClick={() => removeFromCart(item.id)}
+                            onClick={() => removeFromCart(item.cartItemId || item.id)}
                             className="text-text-secondary hover:text-primary-brand"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                        <p className="font-sans text-xs text-text-secondary mt-1">₹{item.price.toLocaleString()}</p>
+                        {item.selectedVariant && (
+                          <p className="font-sans text-[10px] text-text-secondary mt-0.5">Size: {item.selectedVariant.size}</p>
+                        )}
+                        <p className="font-sans text-xs text-text-secondary mt-1">₹{getPrice(item).toLocaleString()}</p>
                       </div>
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center border border-border-custom rounded-full px-2 py-1">
                           <button
-                            onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
+                            onClick={() => updateCartQuantity(item.cartItemId || item.id, item.quantity - 1)}
                             className="p-1 hover:text-primary-brand"
                           >
                             <Minus className="w-3 h-3" />
                           </button>
                           <span className="text-xs px-3 font-medium select-none">{item.quantity}</span>
                           <button
-                            onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                            onClick={() => updateCartQuantity(item.cartItemId || item.id, item.quantity + 1)}
                             className="p-1 hover:text-primary-brand"
                           >
                             <Plus className="w-3 h-3" />
                           </button>
                         </div>
                         <span className="font-sans text-sm font-semibold text-text-primary">
-                          ₹{(item.price * item.quantity).toLocaleString()}
+                          ₹{(getPrice(item) * item.quantity).toLocaleString()}
                         </span>
                       </div>
                     </div>

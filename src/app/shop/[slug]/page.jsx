@@ -19,6 +19,7 @@ export default function ProductDetailsPage({ params }) {
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
+  const [selectedVariant, setSelectedVariant] = useState(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -26,6 +27,9 @@ export default function ProductDetailsPage({ params }) {
         const res = await axiosInstance.get(`/products/${slug}`);
         const data = res.data;
         setProduct(data.data?.product);
+        if (data.data?.product?.variants?.length > 0) {
+          setSelectedVariant(data.data.product.variants[0]);
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -75,11 +79,16 @@ export default function ProductDetailsPage({ params }) {
 
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {
-      addToCart(product);
+      addToCart(product, 1, selectedVariant);
     }
   };
 
-  const outOfStock = product.stock === 0;
+  const currentPrice = selectedVariant ? selectedVariant.price : product.price;
+  const currentDiscountPrice = (selectedVariant && selectedVariant.discountPrice) ? selectedVariant.discountPrice : product.discountPrice;
+  // Use product stock if no variants, otherwise use variant stock
+  const outOfStock = product.variants && product.variants.length > 0 
+    ? (selectedVariant ? selectedVariant.stock === 0 : true) 
+    : product.stock === 0;
 
   return (
     <div className="min-h-screen bg-[#FAF7F4]">
@@ -155,13 +164,16 @@ export default function ProductDetailsPage({ params }) {
               </div>
 
               <div className="text-2xl font-semibold text-[#2B2B2B] mb-6 flex items-center gap-3">
-                {product.discountPrice ? (
+                {currentDiscountPrice ? (
                   <>
-                    <span className="text-[#7B1E1E]">₹{product.discountPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                    <span className="text-lg text-[#999] line-through font-normal">₹{product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="text-[#7B1E1E]">₹{currentDiscountPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="text-lg text-[#999] line-through font-normal">₹{currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </>
                 ) : (
-                  <span>₹{(product.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span>
+                    {product.variants && product.variants.length > 0 && !selectedVariant && <span className="text-sm font-normal mr-1 text-[#2B2B2B]">From</span>}
+                    ₹{(currentPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
                 )}
               </div>
 
@@ -169,12 +181,30 @@ export default function ProductDetailsPage({ params }) {
                 {product.shortDescription || product.description}
               </p>
 
-              {/* Specs Grid */}
+              {/* Variant Selector */}
+              {product.variants && product.variants.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-[#2B2B2B] uppercase tracking-widest mb-3">Select Size</h3>
+                  <div className="flex flex-wrap gap-3">
+                    {product.variants.map((variant, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedVariant(variant)}
+                        className={`px-4 py-2 border rounded-md font-medium text-sm transition-all ${
+                          selectedVariant?.size === variant.size
+                            ? "border-[#7B1E1E] bg-[#7B1E1E] text-white"
+                            : "border-[#E8DCD3] text-[#666] hover:border-[#7B1E1E]"
+                        }`}
+                      >
+                        {variant.size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-y-4 mb-8 py-6 border-y border-[#E8DCD3]">
-                {product.material && <div><span className="text-[#666] text-sm block mb-1">Material</span><span className="font-medium text-[#2B2B2B]">{product.material}</span></div>}
-                {product.size && <div><span className="text-[#666] text-sm block mb-1">Dimensions</span><span className="font-medium text-[#2B2B2B]">{product.size}</span></div>}
                 {product.origin && <div><span className="text-[#666] text-sm block mb-1">Origin</span><span className="font-medium text-[#2B2B2B]">{product.origin}</span></div>}
-                {product.weavingType && <div><span className="text-[#666] text-sm block mb-1">Technique</span><span className="font-medium text-[#2B2B2B]">{product.weavingType}</span></div>}
               </div>
 
               {/* Actions */}

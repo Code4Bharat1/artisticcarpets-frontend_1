@@ -1,11 +1,22 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useStore } from "@/store/useStore";
 import { X, ShoppingBag, Heart, Star, Check } from "lucide-react";
 import Button from "@/components/common/Button";
 
 export default function QuickViewModal() {
   const { quickViewProduct, setQuickViewProduct, addToCart, wishlist, toggleWishlist } = useStore();
+  
+  const [selectedVariant, setSelectedVariant] = useState(null);
+
+  useEffect(() => {
+    if (quickViewProduct?.variants && quickViewProduct.variants.length > 0) {
+      setSelectedVariant(quickViewProduct.variants[0]);
+    } else {
+      setSelectedVariant(null);
+    }
+  }, [quickViewProduct]);
 
   if (!quickViewProduct) return null;
 
@@ -14,7 +25,8 @@ export default function QuickViewModal() {
   // Map backend data structure
   const title = quickViewProduct.title || quickViewProduct.name;
   const price = quickViewProduct.price || 0;
-  const discountPrice = quickViewProduct.discountPrice;
+  const currentPrice = selectedVariant ? selectedVariant.price : price;
+  const discountPrice = (selectedVariant && selectedVariant.discountPrice) ? selectedVariant.discountPrice : quickViewProduct.discountPrice;
   const rating = quickViewProduct.ratingAverage || quickViewProduct.rating || 0;
   const reviews = quickViewProduct.ratingCount || quickViewProduct.reviews || 0;
   const description = quickViewProduct.description || quickViewProduct.shortDescription;
@@ -91,11 +103,12 @@ export default function QuickViewModal() {
                 </h3>
                 <div className="flex items-center gap-3 mt-1">
                   <p className="font-sans text-xl font-bold text-primary-brand">
-                    ₹{discountPrice ? discountPrice.toLocaleString() : price.toLocaleString()}
+                    {quickViewProduct.variants && quickViewProduct.variants.length > 0 && !selectedVariant && <span className="text-sm font-normal mr-1 text-text-primary">From</span>}
+                    ₹{discountPrice ? discountPrice.toLocaleString() : currentPrice.toLocaleString()}
                   </p>
                   {discountPrice && (
                     <p className="font-sans text-sm text-text-muted line-through">
-                      ₹{price.toLocaleString()}
+                      ₹{currentPrice.toLocaleString()}
                     </p>
                   )}
                 </div>
@@ -106,14 +119,34 @@ export default function QuickViewModal() {
                 {description}
               </p>
 
+              {/* Size Selector */}
+              {quickViewProduct.variants && quickViewProduct.variants.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  <h4 className="font-serif text-[10px] font-bold tracking-widest uppercase text-text-primary">
+                    Select Size
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {quickViewProduct.variants.map((variant, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedVariant(variant)}
+                        className={`px-3 py-1.5 text-xs font-sans border rounded-md transition-all ${
+                          selectedVariant?.size === variant.size
+                            ? "border-primary-brand bg-primary-brand text-brand-white"
+                            : "border-border-custom text-text-secondary hover:border-primary-brand"
+                        }`}
+                      >
+                        {variant.size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Details List */}
               {(() => {
                 const details = quickViewProduct.details || [
-                  quickViewProduct.material && `Material: ${quickViewProduct.material}`,
-                  quickViewProduct.size && `Size: ${quickViewProduct.size}`,
-                  quickViewProduct.shape && `Shape: ${quickViewProduct.shape}`,
                   quickViewProduct.origin && `Origin: ${quickViewProduct.origin}`,
-                  quickViewProduct.weavingType && `Weaving: ${quickViewProduct.weavingType}`,
                 ].filter(Boolean);
 
                 if (details.length === 0) return null;
@@ -141,7 +174,7 @@ export default function QuickViewModal() {
               <Button
                 variant="primary"
                 onClick={() => {
-                  addToCart(quickViewProduct);
+                  addToCart(quickViewProduct, 1, selectedVariant);
                   setQuickViewProduct(null);
                 }}
                 className="w-full justify-center py-4 text-xs font-semibold"

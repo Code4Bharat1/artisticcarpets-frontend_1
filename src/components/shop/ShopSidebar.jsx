@@ -50,6 +50,7 @@ const AccordionSection = ({
 };
 
 export default function ShopSidebar({ 
+  products = [],
   filters, 
   setFilters, 
   isOpen, 
@@ -69,30 +70,27 @@ export default function ShopSidebar({
     "Modern Flower Rugs",
     "Animal Rectangle Rugs"
   ];
-
-  const materials = ["Hand-Spun Wool", "Organic Silk", "Jute & Hemp", "Viscose Blend"];
-  const sizes = ["2' x 3'", "4' x 6'", "5' x 8'", "8' x 10'", "9' x 12'", "Runner"];
-  const colors = [
-    { name: "Dark Red", hex: "#7B1E1E" },
-    { name: "Cream", hex: "#F3EFE9" },
-    { name: "Brown", hex: "#8B5A2B" },
-    { name: "Dark Blue", hex: "#1A2B4C" },
-    { name: "Taupe", hex: "#B3A294" }
-  ];
-  const shapes = ["Rectangle", "Round / Circular", "Oval"];
+  
+  const sizes = Array.from(new Set(products.flatMap(p => p.variants?.map(v => v.size) || []).filter(Boolean)));
+  
+  // Create a mapping of color names to hex codes if we want to show hex colors.
+  // Otherwise, we just use the name for the button.
+  // We'll fall back to a default hex based on name, or just use CSS text color if hex isn't mapped.
+  const colorMap = {
+    "Dark Red": "#7B1E1E", "Cream": "#F3EFE9", "Brown": "#8B5A2B", "Dark Blue": "#1A2B4C", "Taupe": "#B3A294",
+    "Red": "#FF0000", "Blue": "#0000FF", "Green": "#008000", "Black": "#000000", "White": "#FFFFFF", "Grey": "#808080"
+  };
+  const dynamicColors = Array.from(new Set(products.map(p => p.color).filter(Boolean)));
+  const colors = dynamicColors.map(c => ({
+    name: c,
+    hex: colorMap[c] || c.toLowerCase().replace(/\s/g, '') // Fallback to css-compatible name
+  }));
 
   const toggleSection = (section) => {
     setOpenSection(prev => prev === section ? null : section);
   };
 
-  const handleMaterialChange = (mat) => {
-    setFilters(prev => {
-      const newMaterials = prev.materials.includes(mat)
-        ? prev.materials.filter(m => m !== mat)
-        : [...prev.materials, mat];
-      return { ...prev, materials: newMaterials, page: 1 };
-    });
-  };
+
 
   const handleCategoryChange = (categoryName) => {
     setFilters(prev => {
@@ -119,13 +117,7 @@ export default function ShopSidebar({
     }));
   };
 
-  const handleShapeChange = (shape) => {
-    setFilters(prev => ({
-      ...prev,
-      shape: prev.shape === shape ? null : shape,
-      page: 1
-    }));
-  };
+
 
   const handlePriceRelease = () => {
     setFilters(prev => ({ ...prev, priceRange: localPrice, page: 1 }));
@@ -169,7 +161,7 @@ export default function ShopSidebar({
         title="Price"
         isOpen={openSection === "Price"}
         onToggle={() => toggleSection("Price")}
-        isActive={filters.priceRange < 5000}
+        isActive={filters.priceRange < Math.max(5000, ...products.map(p => p.price || 0))}
       >
         <div className="flex justify-between text-sm font-sans text-[#666] mb-2">
           <span>₹0</span>
@@ -178,8 +170,8 @@ export default function ShopSidebar({
         <input 
           type="range" 
           min="0" 
-          max="5000" 
-          step="100"
+          max={Math.max(5000, ...products.map(p => p.price || 0))} 
+          step="500"
           value={localPrice}
           onChange={(e) => setLocalPrice(Number(e.target.value))}
           onMouseUp={handlePriceRelease}
@@ -188,36 +180,6 @@ export default function ShopSidebar({
         />
       </AccordionSection>
 
-      {/* Material Filter */}
-      <AccordionSection
-        title="Material"
-        isOpen={openSection === "Material"}
-        onToggle={() => toggleSection("Material")}
-        isActive={filters.materials.length > 0}
-      >
-        <div className="flex flex-col gap-3 font-sans text-sm">
-          {materials.map(mat => (
-            <label key={mat} className="flex items-center gap-3 cursor-pointer group">
-              <input 
-                type="checkbox" 
-                className="hidden" 
-                checked={filters.materials.includes(mat)} 
-                onChange={() => handleMaterialChange(mat)} 
-              />
-              <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${
-                filters.materials.includes(mat) ? 'bg-[#7B1E1E] border-[#7B1E1E]' : 'border-[#E8DCD3] group-hover:border-[#7B1E1E]'
-              }`}>
-                {filters.materials.includes(mat) && (
-                  <svg width="12" height="10" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M1 5L4.5 8.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                )}
-              </div>
-              <span className={filters.materials.includes(mat) ? "font-semibold" : ""}>{mat}</span>
-            </label>
-          ))}
-        </div>
-      </AccordionSection>
 
       {/* Size Filter */}
       <AccordionSection
@@ -269,34 +231,6 @@ export default function ShopSidebar({
         </div>
       </AccordionSection>
 
-      {/* Shape Filter */}
-      <AccordionSection
-        title="Rug Shape"
-        isOpen={openSection === "Rug Shape"}
-        onToggle={() => toggleSection("Rug Shape")}
-        isActive={filters.shape !== null}
-      >
-        <div className="flex flex-col gap-3 font-sans text-sm">
-          {shapes.map(shape => (
-            <label key={shape} className="flex items-center gap-3 cursor-pointer group">
-              <input 
-                type="checkbox" 
-                className="hidden" 
-                checked={filters.shape === shape} 
-                onChange={() => handleShapeChange(shape)} 
-              />
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center border transition-colors ${
-                filters.shape === shape ? 'border-[#7B1E1E]' : 'border-[#E8DCD3] group-hover:border-[#7B1E1E]'
-              }`}>
-                {filters.shape === shape && (
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#7B1E1E]" />
-                )}
-              </div>
-              <span className={filters.shape === shape ? "font-semibold" : ""}>{shape}</span>
-            </label>
-          ))}
-        </div>
-      </AccordionSection>
     </div>
   );
 

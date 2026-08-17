@@ -7,36 +7,48 @@ export const useStore = create(
       // Cart State
       cart: [],
       isCartOpen: false,
-      addToCart: (product) =>
+      addToCart: (product, quantity = 1, variant = null) =>
         set((state) => {
-          if ((product.stock !== undefined && product.stock <= 0) || (product.availableStock !== undefined && product.availableStock <= 0)) {
+          const pId = product.id || product._id;
+          const cartItemId = variant ? `${pId}-${variant.size}` : pId;
+          const stockLimit = variant ? variant.stock : (product.stock !== undefined ? product.stock : product.availableStock);
+
+          if (stockLimit !== undefined && stockLimit <= 0) {
             alert("This product is currently out of stock and cannot be added to your cart.");
             return state;
           }
-          const pId = product.id || product._id;
-          const existing = state.cart.find((item) => (item.id || item._id) === pId);
+
+          const existing = state.cart.find((item) => item.cartItemId === cartItemId || (item.id || item._id) === cartItemId);
+          
           if (existing) {
-            if ((product.stock !== undefined && existing.quantity >= product.stock) || (product.availableStock !== undefined && existing.quantity >= product.availableStock)) {
+            if (stockLimit !== undefined && existing.quantity + quantity > stockLimit) {
               alert("You cannot add more of this product than what is in stock.");
               return state;
             }
             return {
               cart: state.cart.map((item) =>
-                (item.id || item._id) === pId ? { ...item, quantity: item.quantity + 1 } : item
+                (item.cartItemId || item.id || item._id) === cartItemId 
+                  ? { ...item, quantity: item.quantity + quantity } 
+                  : item
               ),
               isCartOpen: true
             };
           }
-          return { cart: [...state.cart, { ...product, id: pId, quantity: 1 }], isCartOpen: true };
+          return { 
+            cart: [...state.cart, { ...product, id: pId, cartItemId, quantity, selectedVariant: variant }], 
+            isCartOpen: true 
+          };
         }),
-      removeFromCart: (productId) =>
+      removeFromCart: (cartItemId) =>
         set((state) => ({
-          cart: state.cart.filter((item) => item.id !== productId),
+          cart: state.cart.filter((item) => (item.cartItemId || item.id || item._id) !== cartItemId),
         })),
-      updateCartQuantity: (productId, quantity) =>
+      updateCartQuantity: (cartItemId, quantity) =>
         set((state) => ({
           cart: state.cart.map((item) =>
-            item.id === productId ? { ...item, quantity: Math.max(1, quantity) } : item
+            (item.cartItemId || item.id || item._id) === cartItemId 
+              ? { ...item, quantity: Math.max(1, quantity) } 
+              : item
           ),
         })),
       setCartOpen: (isOpen) => set({ isCartOpen: isOpen }),
