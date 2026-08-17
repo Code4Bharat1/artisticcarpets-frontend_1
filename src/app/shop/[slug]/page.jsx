@@ -171,7 +171,6 @@ export default function ProductDetailsPage({ params }) {
                   </>
                 ) : (
                   <span>
-                    {product.variants && product.variants.length > 0 && !selectedVariant && <span className="text-sm font-normal mr-1 text-[#2B2B2B]">From</span>}
                     ₹{(currentPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </span>
                 )}

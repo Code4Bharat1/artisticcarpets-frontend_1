@@ -2,15 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { useStore } from "@/store/useStore";
-import { X, ShoppingBag, Heart, Star, Check } from "lucide-react";
+import { X, ShoppingBag, Heart, Star, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import Button from "@/components/common/Button";
 
 export default function QuickViewModal() {
   const { quickViewProduct, setQuickViewProduct, addToCart, wishlist, toggleWishlist } = useStore();
   
   const [selectedVariant, setSelectedVariant] = useState(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   useEffect(() => {
+    setActiveImageIndex(0); // Reset image index when modal opens with new product
     if (quickViewProduct?.variants && quickViewProduct.variants.length > 0) {
       setSelectedVariant(quickViewProduct.variants[0]);
     } else {
@@ -38,11 +40,21 @@ export default function QuickViewModal() {
     return `${baseUrl}${path}`;
   };
 
-  const mainImg = quickViewProduct.thumbnail?.path
-    ? getImgUrl(quickViewProduct.thumbnail.path)
-    : (quickViewProduct.images && quickViewProduct.images.length > 0
-      ? getImgUrl(quickViewProduct.images[0].path)
-      : (quickViewProduct.image || "https://images.unsplash.com/photo-1600166898232-2c9018300e0a?q=80&w=800&auto=format&fit=crop"));
+  const galleryImages = [];
+  if (quickViewProduct.thumbnail?.path) {
+    galleryImages.push(getImgUrl(quickViewProduct.thumbnail.path));
+  }
+  if (quickViewProduct.images && quickViewProduct.images.length > 0) {
+    quickViewProduct.images.forEach(img => {
+      galleryImages.push(getImgUrl(img.path));
+    });
+  }
+  if (galleryImages.length === 0 && quickViewProduct.image) {
+    galleryImages.push(quickViewProduct.image);
+  }
+  if (galleryImages.length === 0) {
+    galleryImages.push("https://images.unsplash.com/photo-1600166898232-2c9018300e0a?q=80&w=800&auto=format&fit=crop");
+  }
 
   let badge = quickViewProduct.badge;
   if (!badge) {
@@ -65,13 +77,43 @@ export default function QuickViewModal() {
         </button>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 md:p-8">
-          {/* Left Column: Image */}
-          <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-collection-bg border border-border-custom">
+          {/* Left Column: Image Slider */}
+          <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-collection-bg border border-border-custom group">
             <img
-              src={mainImg}
-              alt={title}
-              className="w-full h-full object-cover"
+              src={galleryImages[activeImageIndex]}
+              alt={`${title} - Image ${activeImageIndex + 1}`}
+              className="w-full h-full object-cover transition-opacity duration-300"
             />
+            
+            {galleryImages.length > 1 && (
+              <>
+                <button
+                  onClick={() => setActiveImageIndex((prev) => (prev === 0 ? galleryImages.length - 1 : prev - 1))}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-brand-white/80 backdrop-blur border border-border-custom flex items-center justify-center text-text-primary hover:text-primary-brand opacity-0 group-hover:opacity-100 transition-all shadow-sm"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setActiveImageIndex((prev) => (prev === galleryImages.length - 1 ? 0 : prev + 1))}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-brand-white/80 backdrop-blur border border-border-custom flex items-center justify-center text-text-primary hover:text-primary-brand opacity-0 group-hover:opacity-100 transition-all shadow-sm"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+                
+                {/* Dots indicator */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                  {galleryImages.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveImageIndex(idx)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        activeImageIndex === idx ? 'bg-primary-brand w-4' : 'bg-brand-white/70 hover:bg-brand-white'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Right Column: Content Info */}
@@ -103,7 +145,6 @@ export default function QuickViewModal() {
                 </h3>
                 <div className="flex items-center gap-3 mt-1">
                   <p className="font-sans text-xl font-bold text-primary-brand">
-                    {quickViewProduct.variants && quickViewProduct.variants.length > 0 && !selectedVariant && <span className="text-sm font-normal mr-1 text-text-primary">From</span>}
                     ₹{discountPrice ? discountPrice.toLocaleString() : currentPrice.toLocaleString()}
                   </p>
                   {discountPrice && (

@@ -38,8 +38,11 @@ export default function ProductCard({ product, priority = false }) {
 
   // Map Backend Data structure to card UI
   const title = product.title || product.name;
-  const price = product.price || 0;
-  const discountPrice = product.discountPrice;
+  const hasVariants = product.variants && product.variants.length > 0;
+  const rawPrice = hasVariants ? product.variants[0].price : product.price;
+  const price = Number(rawPrice) || 0;
+  const rawDiscountPrice = hasVariants ? product.variants[0].discountPrice : product.discountPrice;
+  const discountPrice = rawDiscountPrice ? Number(rawDiscountPrice) : null;
   const rating = product.ratingAverage || product.rating || 0;
   const subtitle = product.productCollection || product.category || product.subtitle;
   const size = product.size || "";
@@ -58,8 +61,9 @@ export default function ProductCard({ product, priority = false }) {
         ? getImgUrl(product.images[0].path)
         : (product.image || "https://images.unsplash.com/photo-1600166898232-2c9018300e0a?q=80&w=800&auto=format&fit=crop"));
         
-  const hoverImg = product.images && product.images.length > 0 
-    ? getImgUrl(product.images[0].path)
+  const hoverIndex = product.hoverImageIndex || 0;
+  const hoverImg = product.images && product.images.length > hoverIndex 
+    ? getImgUrl(product.images[hoverIndex].path)
     : (product.hoverimage || mainImg);
 
   // Badge Logic
@@ -67,7 +71,7 @@ export default function ProductCard({ product, priority = false }) {
   if (!badge) {
     if (product.isNewArrival) badge = "New";
     else if (product.isBestSeller) badge = "Best Seller";
-    else if (product.discountPrice) badge = "Sale";
+    else if (discountPrice) badge = "Sale";
   }
 
   const outOfStock = product.stock === 0;
@@ -170,7 +174,6 @@ export default function ProductCard({ product, priority = false }) {
           {discountPrice ? (
             <>
               <span className="text-[#980E0A]">
-                {product.variants && product.variants.length > 0 && <span className="text-sm font-normal mr-1">From</span>}
                 ₹{discountPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </span>
               <span className="text-[#999] text-sm line-through font-normal">
@@ -179,7 +182,6 @@ export default function ProductCard({ product, priority = false }) {
             </>
           ) : (
             <span className="text-[#980E0A]">
-              {product.variants && product.variants.length > 0 && <span className="text-sm font-normal mr-1">From</span>}
               ₹{price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>
           )}
