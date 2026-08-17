@@ -52,7 +52,14 @@ export default function Navbar() {
     user,
     setAuthModalOpen,
     logout,
+    syncCartPrices,
   } = useStore();
+
+  useEffect(() => {
+    if (isCartOpen && syncCartPrices) {
+      syncCartPrices();
+    }
+  }, [isCartOpen, syncCartPrices]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -102,6 +109,18 @@ export default function Navbar() {
     const variant = item.selectedVariant;
     if (variant) return variant.discountPrice || variant.price;
     return item.discountPrice || item.price;
+  };
+  
+  const getRegularPrice = (item) => {
+    const variant = item.selectedVariant;
+    if (variant) return variant.price;
+    return item.price;
+  };
+
+  const hasDiscount = (item) => {
+    const variant = item.selectedVariant;
+    if (variant) return variant.discountPrice && variant.discountPrice < variant.price;
+    return item.discountPrice && item.discountPrice < item.price;
   };
   
   const cartSubtotal = cart.reduce((total, item) => total + getPrice(item) * item.quantity, 0);
@@ -465,7 +484,16 @@ export default function Navbar() {
                         {item.selectedVariant && (
                           <p className="font-sans text-[10px] text-text-secondary mt-0.5">Size: {item.selectedVariant.size}</p>
                         )}
-                        <p className="font-sans text-xs text-text-secondary mt-1">₹{getPrice(item).toLocaleString()}</p>
+                        <p className="font-sans text-xs text-text-secondary mt-1">
+                          {hasDiscount(item) ? (
+                            <>
+                              <span className="line-through text-text-secondary/60 mr-2">₹{getRegularPrice(item).toLocaleString()}</span>
+                              <span className="text-primary-brand font-medium">₹{getPrice(item).toLocaleString()}</span>
+                            </>
+                          ) : (
+                            <span>₹{getPrice(item).toLocaleString()}</span>
+                          )}
+                        </p>
                       </div>
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center border border-border-custom rounded-full px-2 py-1">

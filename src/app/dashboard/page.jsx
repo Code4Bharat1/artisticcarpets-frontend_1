@@ -477,6 +477,8 @@ function ActiveOrdersTab() {
     if (["cancelled", "returned", "refunded"].includes(s)) return "bg-red-50 text-red-700 border border-red-200";
     return "bg-gray-50 text-gray-700 border border-gray-200";
   };
+
+  return (
     <div className="animate-fade-in max-w-4xl">
       <div className="mb-10">
         <h2 className="font-serif text-3xl text-[#1E1E1E]">My Active Orders</h2>
@@ -565,16 +567,47 @@ function ActiveOrdersTab() {
                 </div>
 
                 <div className="mt-12 pt-8 border-t border-[#E8E3DD] relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                  <div className="flex-1">
-                    <p className="font-sans text-sm font-semibold text-[#1E1E1E] mb-2">{itemString}</p>
-                    {order.items && order.items.length > 0 && (
-                       <div className="space-y-1">
+                  <div className="flex-1 w-full">
+                    {order.items && order.items.length > 0 ? (
+                       <div className="space-y-4">
                          {order.items.map(it => (
-                            <p key={it._id} className="text-xs text-[#666666]">
-                              {it.quantity}x {it.name} - ₹{it.totalPrice?.toLocaleString()}
-                            </p>
+                            <div key={it._id} className="flex flex-col sm:flex-row sm:items-center gap-4 bg-[#faf9f5] p-4 rounded-2xl border border-[#E8E3DD]">
+                              <div className="w-16 h-16 rounded-xl overflow-hidden bg-white border border-[#E8E3DD] flex-shrink-0 relative">
+                                {it.image ? (
+                                  <img 
+                                    src={(() => {
+                                      const path = it.image;
+                                      const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace("/api", "");
+                                      if (path.startsWith("http") || path.startsWith("/")) {
+                                        return path.startsWith("/") && !path.startsWith("/images") ? `${baseUrl}${path.replace(/\\/g, '/')}` : path.replace(/\\/g, '/');
+                                      }
+                                      return `${baseUrl}/${path.replace(/\\/g, '/')}`;
+                                    })()}
+                                    alt={it.name}
+                                    className="object-cover w-full h-full"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                    <Package className="w-6 h-6 text-gray-400" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-sans font-semibold text-sm text-[#1E1E1E] truncate">{it.name}</p>
+                                <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                                  {it.size && <span className="text-xs text-[#666666]">Size: {it.size}</span>}
+                                  {it.color && <span className="text-xs text-[#666666]">Color: {it.color}</span>}
+                                  <span className="text-xs text-[#666666] font-medium">Qty: {it.quantity}</span>
+                                </div>
+                              </div>
+                              <div className="text-left sm:text-right">
+                                <p className="font-serif font-bold text-[#700B08]">₹{it.totalPrice?.toLocaleString()}</p>
+                              </div>
+                            </div>
                          ))}
                        </div>
+                    ) : (
+                      <p className="font-sans text-sm font-semibold text-[#1E1E1E] mb-2">{itemString}</p>
                     )}
                   </div>
                 </div>
@@ -584,8 +617,7 @@ function ActiveOrdersTab() {
         </div>
       )}
     </div>
-  
-
+  );
 }
 
 function OrderHistoryTab() {
@@ -644,19 +676,57 @@ function OrderHistoryTab() {
                   </span>
                 </div>
               </div>
-              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-[#faf9f5] rounded-xl flex items-center justify-center border border-[#E8E3DD]">
-                    <Package className="w-6 h-6 text-[#999999]" />
+              <div className="flex flex-col gap-4">
+                {order.items && order.items.length > 0 ? (
+                  <div className="space-y-4">
+                    {order.items.map(it => (
+                      <div key={it._id} className="flex flex-col sm:flex-row sm:items-center gap-4 bg-[#faf9f5] p-4 rounded-2xl border border-[#E8E3DD]">
+                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-white border border-[#E8E3DD] flex-shrink-0 relative">
+                          {it.image ? (
+                            <img 
+                              src={(() => {
+                                const path = it.image;
+                                const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace("/api", "");
+                                if (path.startsWith("http") || path.startsWith("/")) {
+                                  return path.startsWith("/") && !path.startsWith("/images") ? `${baseUrl}${path.replace(/\\/g, '/')}` : path.replace(/\\/g, '/');
+                                }
+                                return `${baseUrl}/${path.replace(/\\/g, '/')}`;
+                              })()}
+                              alt={it.name}
+                              className="object-cover w-full h-full"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                              <Package className="w-6 h-6 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-sans font-semibold text-sm text-[#1E1E1E] truncate">{it.name}</p>
+                          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                            {it.size && <span className="text-xs text-[#666666]">Size: {it.size}</span>}
+                            {it.color && <span className="text-xs text-[#666666]">Color: {it.color}</span>}
+                            <span className="text-xs text-[#666666] font-medium">Qty: {it.quantity}</span>
+                          </div>
+                        </div>
+                        <div className="text-left sm:text-right">
+                          <p className="font-serif font-bold text-[#700B08]">₹{it.totalPrice?.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div>
-                    <p className="font-sans text-sm text-[#1E1E1E] font-semibold">{itemString}</p>
-                    {order.items && order.items.length > 0 && (
-                      <p className="text-xs text-[#666666] mt-1">{order.items.length} items included</p>
-                    )}
+                ) : (
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 bg-[#faf9f5] rounded-xl flex items-center justify-center border border-[#E8E3DD]">
+                      <Package className="w-6 h-6 text-[#999999]" />
+                    </div>
+                    <div>
+                      <p className="font-sans text-sm text-[#1E1E1E] font-semibold">{itemString}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex gap-3">
+                )}
+                
+                <div className="flex gap-3 justify-end mt-2">
                   <button className="px-5 py-2.5 rounded-xl border border-[#E8E3DD] font-sans text-xs font-semibold text-[#1E1E1E] hover:bg-[#faf9f5] transition-colors">
                     Invoice
                   </button>
@@ -725,22 +795,30 @@ function ComplaintsTab() {
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState([]);
 
-  const fetchComplaints = async () => {
+  const fetchComplaintsAndOrders = async () => {
     try {
-      const res = await axiosInstance.get("/complaints/my-complaints");
-      if (res.data && res.data.data) {
-        setComplaints(res.data.data);
+      const [complaintsRes, ordersRes] = await Promise.all([
+        axiosInstance.get("/complaints/my-complaints").catch(() => ({ data: { data: [] } })),
+        axiosInstance.get("/orders/my").catch(() => ({ data: { data: [] } }))
+      ]);
+      
+      if (complaintsRes.data && complaintsRes.data.data) {
+        setComplaints(complaintsRes.data.data);
+      }
+      if (ordersRes.data && ordersRes.data.data) {
+        setOrders(ordersRes.data.data);
       }
     } catch (error) {
-      console.error("Failed to fetch complaints:", error);
+      console.error("Failed to fetch data:", error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchComplaints();
+    fetchComplaintsAndOrders();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -761,7 +839,7 @@ function ComplaintsTab() {
       setOrder("");
       setIssueType("");
       setDescription("");
-      fetchComplaints(); // Refresh list
+      fetchComplaintsAndOrders(); // Refresh list
     } catch (error) {
       console.error("Failed to submit complaint:", error);
       alert("Failed to submit ticket.");
@@ -789,8 +867,11 @@ function ComplaintsTab() {
               className="w-full bg-[#faf9f5] border border-[#E8E3DD] rounded-xl px-4 py-3 font-sans text-sm focus:outline-none focus:border-[#700B08]"
             >
               <option value="">Select an order...</option>
-              <option value="ORD-987654321">ORD-987654321 - Persian Vintage Oushak Rug</option>
-              <option value="ORD-9382">ORD-9382 - Persian Vintage Oushak Rug</option>
+              {orders.map(o => (
+                <option key={o._id} value={o._id}>
+                  {o.orderNumber || o._id} - {o.items?.[0]?.name || "Items"}
+                </option>
+              ))}
             </select>
           </div>
           <div>

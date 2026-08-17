@@ -52,6 +52,67 @@ export const useStore = create(
           ),
         })),
       setCartOpen: (isOpen) => set({ isCartOpen: isOpen }),
+      syncCartPrices: async () => {
+        const state = get();
+        if (state.cart.length === 0) return;
+        try {
+          const { default: axiosInstance } = await import('@/services/axiosInstance');
+          const uniqueProducts = [];
+          const seen = new Set();
+          for (const item of state.cart) {
+            const id = item.id || item._id;
+            if (!seen.has(id)) {
+               seen.add(id);
+               uniqueProducts.push({ id, slug: item.slug });
+            }
+          }
+          
+          const updatedCart = [...state.cart];
+          let changed = false;
+          
+          for (const prod of uniqueProducts) {
+            try {
+              const identifier = prod.slug || prod.id;
+              const res = await axiosInstance.get(`/products/${identifier}`);
+              const freshProduct = res.data.data?.product || res.data.data;
+              
+              if (freshProduct) {
+                for (let i = 0; i < updatedCart.length; i++) {
+                  const item = updatedCart[i];
+                  if ((item.id || item._id) === prod.id) {
+                     if (!item.selectedVariant && freshProduct.variants && freshProduct.variants.length > 0) {
+                       item.selectedVariant = freshProduct.variants[0];
+                       item.cartItemId = `${item.id || item._id}-${item.selectedVariant.size}`;
+                       updatedCart[i] = { ...item };
+                       changed = true;
+                     }
+                     if (item.price !== freshProduct.price || item.discountPrice !== freshProduct.discountPrice) {
+                       updatedCart[i] = { ...item, price: freshProduct.price, discountPrice: freshProduct.discountPrice };
+                       changed = true;
+                     }
+                     if (item.selectedVariant) {
+                       const freshVariant = freshProduct.variants?.find(v => v._id === item.selectedVariant._id);
+                       if (freshVariant) {
+                         if (item.selectedVariant.price !== freshVariant.price || item.selectedVariant.discountPrice !== freshVariant.discountPrice) {
+                           updatedCart[i].selectedVariant = { ...item.selectedVariant, price: freshVariant.price, discountPrice: freshVariant.discountPrice };
+                           changed = true;
+                         }
+                       }
+                     }
+                  }
+                }
+              }
+            } catch (err) {
+              console.error(`Failed to sync price for product ${prod.slug || prod.id}`, err);
+            }
+          }
+          if (changed) {
+            set({ cart: updatedCart });
+          }
+        } catch (error) {
+          console.error("Failed to sync cart prices", error);
+        }
+      },
 
       // Wishlist State
       wishlist: [],

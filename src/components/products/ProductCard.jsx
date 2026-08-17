@@ -25,8 +25,10 @@ export default function ProductCard({ product }) {
   const handleAddToCart = (e) => {
     e.stopPropagation();
     e.preventDefault();
-    if (product.stock !== 0) {
-      addToCart(product);
+    const variant = (product.variants && product.variants.length > 0) ? product.variants[0] : null;
+    const stockLimit = variant ? variant.stock : product.stock;
+    if (stockLimit !== 0) {
+      addToCart(product, 1, variant);
     }
   };
 
@@ -169,7 +171,7 @@ export default function ProductCard({ product }) {
             {title}
           </h3>
           <div className="flex flex-col items-end shrink-0">
-            {discountPrice ? (
+            {discountPrice && discountPrice < price ? (
               <>
                 <span className="font-sans text-sm md:text-base font-semibold text-[#980E0A]">
                   ₹{discountPrice.toLocaleString()}
