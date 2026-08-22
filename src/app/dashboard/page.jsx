@@ -726,14 +726,7 @@ function OrderHistoryTab() {
                   </div>
                 )}
                 
-                <div className="flex gap-3 justify-end mt-2">
-                  <button className="px-5 py-2.5 rounded-xl border border-[#E8E3DD] font-sans text-xs font-semibold text-[#1E1E1E] hover:bg-[#faf9f5] transition-colors">
-                    Invoice
-                  </button>
-                  <button className="bg-[#1E1E1E] text-white px-5 py-2.5 rounded-xl font-sans text-xs font-semibold hover:bg-[#700B08] transition-colors shadow-sm">
-                    Reorder
-                  </button>
-                </div>
+
               </div>
             </div>
           );

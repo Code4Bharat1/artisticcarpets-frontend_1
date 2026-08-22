@@ -18,6 +18,10 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
+        hostname: "api-artisticcarpets.nexcorealliance.com",
+      },
+      {
+        protocol: "https",
         hostname: "images.unsplash.com",
       },
       {
