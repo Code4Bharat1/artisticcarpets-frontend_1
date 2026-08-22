@@ -1,17 +1,18 @@
-# Implementation: Image URL Fix (Part 2)
+# Implementation: Image URL Fix (Part 3)
 
-## Issue Discovered
-After the first fix, the images were still failing with a URL like:
-`https://artisticcarpets.nexcorealliance.com/-artisticcarpets.nexcorealliance.com/uploads/...`
+## Issue Discovered (Double Slash Issue)
+You encountered a URL like:
+`http://api-artisticcarpets.nexcorealliance.com/api//uploads/products/...`
 
-**Why?**
-The frontend code was doing `.replace("/api", "")` on the `process.env.NEXT_PUBLIC_API_URL` to calculate the base URL for images. 
-When `NEXT_PUBLIC_API_URL` is `https://api-artisticcarpets.nexcorealliance.com/api`, the `replace` function replaces the **first** occurrence of `/api`.
-Because the domain name is `api-artisticcarpets`, the first occurrence is actually `//api` right after `https:`.
-This turned the string into `https:/-artisticcarpets.nexcorealliance.com/api`, which the browser interpreted as a relative path and appended to the current frontend domain!
+**Why did this happen?**
+This happens if your `NEXT_PUBLIC_API_URL` environment variable has a trailing slash at the end (e.g., `http://api-artisticcarpets.nexcorealliance.com/api/`).
+In our previous fix, the Regex was strictly looking for `/api` exactly at the end of the string (`/\/api$/`). Because of the extra trailing slash `/`, the Regex failed to match. 
+As a result, `process.env.NEXT_PUBLIC_API_URL.replace(...)` didn't remove anything, leaving `baseUrl` as `.../api/`. 
+When the backend path (`/uploads/products/...`) was appended, it created a double slash: `.../api/` + `/uploads...` = `.../api//uploads...`.
 
 ## Fix Applied
-I created and ran a script to update all instances of `.replace("/api", "")` to use a Regex that strictly targets `/api` only at the **end** of the URL string: `.replace(/\/api$/, "")`.
+I updated the script and ran it again to modify the Regex to `.replace(/\/api\/?$/, "")`. 
+The `\/?` part tells the code to optionally match a trailing slash. Now, whether your `NEXT_PUBLIC_API_URL` is set to `.../api` or `.../api/`, it will correctly strip it off and leave just the domain.
 
 ### Files Updated:
 - `src/app/dashboard/page.jsx`
@@ -23,6 +24,4 @@ I created and ran a script to update all instances of `.replace("/api", "")` to 
 - `src/components/products/QuickViewModal.jsx`
 - `src/components/shop/ProductCard.jsx`
 
-Now, `https://api-artisticcarpets.nexcorealliance.com/api`.replace(/\/api$/, "") correctly returns `https://api-artisticcarpets.nexcorealliance.com`, and images will load correctly in the user panel.
-
-**Important:** Please restart your Next.js development server (`npm run dev`) if you haven't already.
+Now, `http://api-artisticcarpets.nexcorealliance.com/api/`.replace(/\/api\/?$/, "") correctly returns `http://api-artisticcarpets.nexcorealliance.com`, avoiding the double slash problem.

@@ -19,8 +19,10 @@ function walk(dir) {
 const files = walk('src');
 files.forEach(file => {
   let content = fs.readFileSync(file, 'utf8');
-  if (content.includes('.replace("/api", "")')) {
-    content = content.replace(/\.replace\("\/api", ""\)/g, '.replace(/\\/api$/, "")');
+  const target = '.replace(/\\/api$/, "")';
+  const replacement = '.replace(/\\/api\\/?$/, "")';
+  if (content.includes(target)) {
+    content = content.split(target).join(replacement);
     fs.writeFileSync(file, content);
     console.log('Updated', file);
   }
