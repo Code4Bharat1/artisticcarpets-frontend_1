@@ -264,7 +264,7 @@ function DetailCart({ cart, removeFromCart, updateCartQuantity, placeOrder, setA
                 src={(() => {
                   const path = item.thumbnail?.path || (item.images && item.images[0]?.path) || item.image || item.mainImage?.path;
                   if (!path) return "https://images.unsplash.com/photo-1600166898232-2c9018300e0a?q=80&w=800&auto=format&fit=crop";
-                  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace("/api", "");
+                  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/api$/, "");
                   if (path.startsWith("http") || path.startsWith("/")) return path.startsWith("/") && !path.startsWith("/images") ? `${baseUrl}${path}` : path;
                   return `${baseUrl}/${path}`;
                 })()}
@@ -577,7 +577,7 @@ function ActiveOrdersTab() {
                                   <img 
                                     src={(() => {
                                       const path = it.image;
-                                      const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace("/api", "");
+                                      const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/api$/, "");
                                       if (path.startsWith("http") || path.startsWith("/")) {
                                         return path.startsWith("/") && !path.startsWith("/images") ? `${baseUrl}${path.replace(/\\/g, '/')}` : path.replace(/\\/g, '/');
                                       }
@@ -686,7 +686,7 @@ function OrderHistoryTab() {
                             <img 
                               src={(() => {
                                 const path = it.image;
-                                const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace("/api", "");
+                                const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/api$/, "");
                                 if (path.startsWith("http") || path.startsWith("/")) {
                                   return path.startsWith("/") && !path.startsWith("/images") ? `${baseUrl}${path.replace(/\\/g, '/')}` : path.replace(/\\/g, '/');
                                 }
